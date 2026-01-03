@@ -1,0 +1,35 @@
+name: deploy-callable
+
+on:
+  workflow_call:
+    inputs:
+      ref:
+        description: 'Commit SHA for rollback'
+        required: false
+        type: string
+
+env:
+  CI: true
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Configure git authentication
+        id: auth
+        uses: decewei/deploy-tools/actions/configure-git-auth@release
+        with:
+          app-id: ${{ vars.ACTION_BOT_APP_ID }}
+          private-key: ${{ secrets.ACTION_BOT_PRIVATE_KEY }}
+          owner: ${{ github.repository_owner }}
+          repositories: scripts
+
+      - uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+          ref: ${{ inputs.ref || '' }}
+
+      # TODO: if need to publish the package to a registry, add steps here
+      - name: Placeholder deployment
+        run: |
+          echo "Deploying"

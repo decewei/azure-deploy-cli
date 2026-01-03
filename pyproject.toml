@@ -1,0 +1,140 @@
+[build-system]
+requires = ["setuptools>=68.0", "wheel", "setuptools-scm>=8.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "cc-scripts"
+description = "Climate Compass utility scripts for Azure identity and role management"
+readme = "README.md"
+requires-python = ">=3.10"
+license = {text = "Proprietary"}
+authors = [
+    {name = "ClimateCompass Team", email = "*@climatecompass.ch"}
+]
+keywords = ["azure", "identity", "roles", "service-principal"]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: MIT License",
+    "Natural Language :: English",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+]
+
+dynamic = ["version", "dependencies", "optional-dependencies"]
+
+[tool.setuptools.dynamic]
+dependencies = { file = ["requirements.txt"] }
+
+[tool.setuptools.dynamic.optional-dependencies]
+dev = { file = ["requirements-dev.txt"] }
+
+[project.urls]
+Homepage = "https://github.com/klimatekompass/scripts"
+Repository = "https://github.com/klimatekompass/scripts.git"
+Issues = "https://github.com/klimatekompass/scripts/issues"
+
+[project.scripts]
+cc-scripts = "cc_scripts.cli:main"
+cc-identity = "cc_scripts.cli:main"
+ccc = "cc_scripts.cli:main"
+
+[tool.setuptools]
+packages = { find = { where = ["src"] } }
+
+[tool.setuptools.package-dir]
+"" = "src"
+
+[tool.setuptools.package-data]
+cc_scripts = [
+    "py.typed",
+    "aca/bash/*.sh",
+    "aca/aca-cert/*.sh",
+]
+
+# Ruff configuration - modern linter/formatter
+[tool.ruff]
+line-length = 100
+target-version = "py310"
+src = ["src", "tests"]
+
+[tool.ruff.lint]
+select = [
+    "E",    # pycodestyle errors
+    "W",    # pycodestyle warnings
+    "F",    # Pyflakes
+    "I",    # isort
+    "C",    # flake8-comprehensions
+    "B",    # flake8-bugbear
+    "UP",   # pyupgrade
+]
+ignore = []
+
+[tool.ruff.lint.isort]
+known-first-party = ["cc_scripts"]
+
+[tool.ruff.lint.per-file-ignores]
+"__init__.py" = ["F401"]  # Allow unused imports in __init__.py
+
+# mypy configuration - static type checking
+[tool.mypy]
+python_version = "3.10"
+warn_return_any = true
+warn_unused_configs = true
+disallow_untyped_defs = false
+strict = false
+check_untyped_defs = true
+
+[[tool.mypy.overrides]]
+module = [
+    "azure.*",
+    "dotenv.*",
+    "pydantic.*",
+]
+ignore_missing_imports = true
+
+# Pytest configuration
+[tool.pytest.ini_options]
+minversion = "7.0"
+testpaths = ["tests"]
+python_files = ["test_*.py", "*_test.py"]
+python_classes = ["Test*"]
+python_functions = ["test_*"]
+addopts = [
+    "--strict-markers",
+    "--tb=short",
+    "--disable-warnings",
+]
+log_cli = true
+log_cli_level = "INFO"
+
+# Coverage configuration
+[tool.coverage.run]
+source = ["src/cc_scripts"]
+branch = true
+
+[tool.coverage.report]
+exclude_lines = [
+    "pragma: no cover",
+    "def __repr__",
+    "raise AssertionError",
+    "raise NotImplementedError",
+    "if __name__ == .__main__.:",
+    "if TYPE_CHECKING:",
+    "class .*\\bProtocol\\):",
+    "@(abc\\.)?abstractmethod",
+]
+
+# Commitizen configuration
+[tool.commitizen]
+name = "cz_conventional_commits"
+tag_format = "v$version"
+# Note: version_files not applicable with setuptools-scm (version is dynamic from git tags)
+update_changelog_on_bump = false
+major_version_zero = true
+
+# setuptools-scm configuration for automatic versioning
+[tool.setuptools_scm]
+version_file = "src/cc_scripts/_version.py"

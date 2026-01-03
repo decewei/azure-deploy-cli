@@ -1,0 +1,24 @@
+{
+    "description": "Role configuration for grant scraper service principal",
+    "roles": [
+        {
+            "type": "cosmos-db",
+            "account": "${COSMOS_ACCOUNT_NAME}",
+            "role": "Cosmos DB Built-in Data Contributor",
+            "scope": "/",
+            "description": "Required for readMetadata permission and data access"
+        },
+        {
+            "type": "rbac",
+            "role": "Cognitive Services OpenAI Contributor",
+            "scope": "/subscriptions/${SUBSCRIPTION_ID}/resourceGroups/${RESOURCE_GROUP}/providers/Microsoft.CognitiveServices/accounts/${OPENAI_RESOURCE_NAME}",
+            "description": "Required for Azure OpenAI resource access"
+        },
+        {
+            "type": "rbac",
+            "role": "Storage Blob Data Contributor",
+            "scope": "/subscriptions/${SUBSCRIPTION_ID}/resourceGroups/${RESOURCE_GROUP}/providers/Microsoft.Storage/storageAccounts/${BLOB_STORAGE_ACCOUNT_NAME}",
+            "description": "Required for blob upload and download"
+        }
+    ]
+}
