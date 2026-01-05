@@ -1,3 +1,12 @@
+## [0.1.7] - 2026-01-05
+
+### 🐛 Bug Fixes
+
+- Add enable-prerelease to github release and fix parameters
+
+### ⚙️ Miscellaneous Tasks
+
+- *(release)* Bump version to 0.1.7 [skip ci]
 ## [0.1.6] - 2026-01-05
 
 ### 🐛 Bug Fixes
