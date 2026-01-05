@@ -215,3 +215,4 @@ marimo/_lsp/
 __marimo__/
 
 src/azure_deploy_cli/_version.py
+git-cliff/
