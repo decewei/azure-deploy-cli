@@ -51,6 +51,8 @@ jobs:
     needs: [version-and-tag]
     uses: ./.github/workflows/2-deploy.yaml
     secrets: inherit
+    with:
+      tag: ${{ needs.version-and-tag.outputs.tag }}
 
   update-pr-label:
     needs: [deploy-prod, version-and-tag]
