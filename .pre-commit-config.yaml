@@ -1,0 +1,49 @@
+# Pre-commit hooks for grantcompass-scraper
+# See https://pre-commit.com for more information
+
+repos:
+  # Commitizen - enforce conventional commits
+  - repo: https://github.com/commitizen-tools/commitizen
+    rev: v3.29.1
+    hooks:
+      - id: commitizen
+        stages: [commit-msg]
+
+  # Ruff - Python linting and formatting
+  - repo: https://github.com/astral-sh/ruff-pre-commit
+    rev: v0.6.9
+    hooks:
+      - id: ruff
+        args: [--fix]
+      - id: ruff-format
+
+  # mypy - static type checking
+  - repo: https://github.com/pre-commit/mirrors-mypy
+    rev: v1.11.2
+    hooks:
+      - id: mypy
+        additional_dependencies: []
+        args: [--config-file=pyproject.toml]
+        exclude: ^tests/
+
+  # General pre-commit hooks
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v6.0.0
+    hooks:
+      - id: trailing-whitespace
+      - id: end-of-file-fixer
+      - id: check-yaml
+      - id: check-added-large-files
+        args: ['--maxkb=1000']
+      - id: check-merge-conflict
+      - id: detect-private-key
+
+  # Prevent committing sensitive Azure credentials
+  - repo: local
+    hooks:
+      - id: block-azure-credentials
+        name: Block Azure Credentials
+        entry: bash -c 'grep -rE "(clientSecret|privateKey|password|connection.?string)" --include="*.py" --include="*.json" src/ tests/ || true; [[ $? -eq 1 ]]'
+        language: system
+        types: [python, json]
+        stages: [commit]

@@ -1,0 +1,23 @@
+name: PR build check
+
+on:
+  pull_request:
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  build-dev:
+    uses: ./.github/workflows/2-build.yaml
+    secrets: inherit
+
+  dependabot:
+    runs-on: ubuntu-latest
+    needs: [build-dev]
+    steps:
+      - name: Auto-merge dependabot PR
+        uses: decewei/deploy-tools/actions/dependabot-auto-merge@release
+        with:
+          app-id: ${{ vars.ACTION_BOT_APP_ID }}
+          private-key: ${{ secrets.ACTION_BOT_PRIVATE_KEY }}

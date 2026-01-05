@@ -1,0 +1,70 @@
+name: Release
+
+on:
+  pull_request:
+    types: [closed]
+    branches:
+      - release
+  workflow_dispatch:
+
+concurrency:
+  group: release
+  cancel-in-progress: false
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  version-and-tag:
+    runs-on: ubuntu-latest
+    outputs:
+      continue: ${{ steps.version.outputs.continue }}
+      tag: ${{ steps.version.outputs.tag }}
+      version: ${{ steps.version.outputs.version }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Bump version and tag with approval check
+        id: version
+        uses: decewei/deploy-tools/actions/bump-version-and-tag-with-approval@release
+        with:
+          app-id: ${{ vars.ACTION_BOT_APP_ID }}
+          private-key: ${{ secrets.ACTION_BOT_PRIVATE_KEY }}
+          pr-number: ${{ github.event.pull_request.number }}
+          repo: ${{ github.repository }}
+          tag-prefix: 'v'
+          main-branch: 'main'
+          release-branch: 'release'
+          semantic-version-pattern-major: '/!:|BREAKING CHANGE:/'
+          semantic-version-pattern-minor: '/feat:/'
+          version-file-type: 'python'
+          change-path: 'src/,pyproject.toml,requirements.txt,requirements-dev.txt'
+          enable-prerelease: ${{ contains(github.event.pull_request.labels.*.name, 'release:candidate') }}
+          prerelease-suffix: 'rc'
+
+  deploy-prod:
+    if: ${{ needs.version-and-tag.outputs.continue == 'true' }}
+    needs: [version-and-tag]
+    uses: ./.github/workflows/2-deploy.yaml
+    secrets: inherit
+
+  update-pr-label:
+    needs: [deploy-prod, version-and-tag]
+    if: ${{ github.event_name == 'pull_request' && needs.version-and-tag.outputs.continue == 'true' && always() }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Label release PR
+        uses: decewei/deploy-tools/actions/label-release-pr@release
+        with:
+          app-id: ${{ vars.ACTION_BOT_APP_ID }}
+          private-key: ${{ secrets.ACTION_BOT_PRIVATE_KEY }}
+          pr-number: ${{ github.event.pull_request.number }}
+          repo: ${{ github.repository }}
+          deploy-result: ${{ needs.version-and-tag.result && needs.deploy-prod.result }}
+          released-label: 'release:released'
+          failed-label: 'release:failed-to-release'

@@ -1,0 +1,30 @@
+name: build-callable
+
+on:
+  workflow_call:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v6
+
+      - name: Set up Python 3.11
+        uses: actions/setup-python@v6
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+
+      - name: Install dependencies
+        run: make install-dev
+
+      - name: Lint
+        run: make lint
+
+      - name: Type check
+        run: make type-check
+
+      - name: Test
+        run: make test

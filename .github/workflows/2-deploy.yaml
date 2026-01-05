@@ -1,0 +1,83 @@
+name: deploy-callable
+
+on:
+  workflow_call:
+    inputs:
+      ref:
+        description: 'Commit SHA for rollback'
+        required: false
+        type: string
+      version:
+        description: 'Version being deployed'
+        required: false
+        type: string
+
+env:
+  CI: true
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - name: Configure git authentication
+        id: auth
+        uses: decewei/deploy-tools/actions/configure-git-auth@release
+        with:
+          app-id: ${{ vars.ACTION_BOT_APP_ID }}
+          private-key: ${{ secrets.ACTION_BOT_PRIVATE_KEY }}
+          owner: ${{ github.repository_owner }}
+          repositories: scripts
+
+      - uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+          ref: ${{ inputs.ref || '' }}
+
+      - name: Set up Python 3.11
+        uses: actions/setup-python@v6
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+
+      - name: Install build dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install build twine
+
+      - name: Build package
+        run: |
+          python -m build
+
+      - name: Publish to PyPI
+        if: startsWith(github.ref, 'refs/tags/')
+        env:
+          PYPI_TOKEN: ${{ secrets.PYPI_TOKEN }}
+        run: |
+          twine upload dist/* -u __token__ -p "$PYPI_TOKEN" --skip-existing
+
+      - name: Extract Changelog
+        id: changelog
+        uses: CSchoel/release-notes-from-changelog@v1
+        with:
+          version: ${{ github.ref_name }}
+          changelog_path: CHANGELOG.md
+
+      - name: Create GitHub Release
+        uses: actions/create-release@v1
+        with:
+          tag_name: ${{ github.ref_name }}
+          name: Release ${{ github.ref_name }}
+          body: |
+            ## Changes
+
+            ${{ steps.changelog.outputs.changelog }}
+
+            ## Installation
+
+            Install from PyPI:
+            ```bash
+            pip install azure-deploy-cli
+            ```
