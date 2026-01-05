@@ -1,3 +1,12 @@
+## [0.1.9] - 2026-01-05
+
+### 🐛 Bug Fixes
+
+- Comment out PyPI publish step in deploy workflow (#18)
+
+### ⚙️ Miscellaneous Tasks
+
+- *(release)* Bump version to 0.1.9 [skip ci]
 ## [0.1.8] - 2026-01-05
 
 ### 🐛 Bug Fixes
