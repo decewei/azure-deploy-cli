@@ -19,11 +19,14 @@ on:
 env:
   CI: true
 
+permissions:
+  contents: write
+  pull-requests: write
+  id-token: write
+
 jobs:
   deploy:
     runs-on: ubuntu-latest
-    permissions:
-      id-token: write
     steps:
       - name: Configure git authentication
         id: auth
