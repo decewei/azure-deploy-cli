@@ -1,10 +1,9 @@
-## [0.1.3] - 2026-01-05
+## [0.1.4] - 2026-01-05
 
 ### 🐛 Bug Fixes
 
-- Add tag
+- Version and tag and pypi publish permissions
 
 ### ⚙️ Miscellaneous Tasks
 
-- Publish without token
-- *(release)* Bump version to 0.1.3 [skip ci]
+- *(release)* Bump version to 0.1.4 [skip ci]
