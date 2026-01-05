@@ -55,6 +55,7 @@ jobs:
     with:
       tag: ${{ needs.version-and-tag.outputs.tag }}
       version: ${{ needs.version-and-tag.outputs.version }}
+      enable-prerelease: ${{ contains(github.event.pull_request.labels.*.name, 'release:candidate') }}
 
   update-pr-label:
     needs: [deploy-prod, version-and-tag]
