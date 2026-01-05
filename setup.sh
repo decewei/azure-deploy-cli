@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # Default environment name
-ENV_NAME="cc-scripts"
+ENV_NAME="azure-deploy-cli"
 
 while [[ "$#" -gt 0 ]]; do
     case $1 in

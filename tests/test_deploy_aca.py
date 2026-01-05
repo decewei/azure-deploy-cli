@@ -1,6 +1,6 @@
 from unittest.mock import Mock
 
-from cc_scripts.aca.deploy_aca import (
+from azure_deploy_cli.aca.deploy_aca import (
     _get_active_revisions_by_label_group,
     _get_container_app,
     _get_latest_revision_by_label,

@@ -3,7 +3,7 @@ from pathlib import Path
 
 import pytest
 
-from cc_scripts.utils.env import (
+from azure_deploy_cli.utils.env import (
     add_var_to_env_file,
     load_env_vars_from_files,
     substitute_env_vars,

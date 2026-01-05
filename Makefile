@@ -3,7 +3,7 @@ SHELL := /bin/bash
 .PHONY: help install install-dev lint format type-check test clean  setup-hooks commit
 
 help:
-	@echo "CC Scripts - Climate Compass Utility Scripts"
+	@echo "Azure Deploy CLI - Azure Deployment Automation"
 	@echo ""
 	@echo "Available targets:"
 	@echo "  install          Install the package locally"
@@ -39,13 +39,13 @@ format:
 	ruff format src/ tests/
 
 type-check:
-	mypy src/cc_scripts
+	mypy src/azure_deploy_cli
 
 test:
 	pytest tests/ -v
 
 test-cov:
-	pytest tests/ -v --cov=src/cc_scripts --cov-report=html --cov-report=term-missing
+	pytest tests/ -v --cov=src/azure_deploy_cli --cov-report=html --cov-report=term-missing
 
 clean:
 	find . -type d -name "__pycache__" -exec rm -rf {} + 2>/dev/null || true

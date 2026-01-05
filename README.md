@@ -1,19 +1,31 @@
-# CC Scripts
+# Azure Deploy CLI
 
-Python CLI package for Climate Compass projects.
+Python CLI for Azure deployment automation - manage identities, roles, and Container Apps deployments.
 
-## Version Management
+## Version Management and Changelog
 
-This project uses [setuptools-scm](https://setuptools-scm.readthedocs.io/) for automatic versioning based on git tags. The version number is dynamically determined from git history at build/install time. No manual version file updates are needed.
+This project uses a dual-tool approach:
+
+- **[setuptools-scm](https://setuptools-scm.readthedocs.io/)** - Automatic versioning based on git tags (dynamic at build time)
+- **[commitizen](https://commitizen-tools.github.io/commitizen/)** - Version bumping and tagging with semantic versioning
+- **[git-cliff](https://git-cliff.org/)** - Automatic changelog generation from conventional commits
+
+**Release workflow:**
+1. git-cliff generates changelog from commits since last tag
+2. commitizen bumps version and creates git tag
+3. New version is committed alongside updated changelog
+4. Tag triggers PyPI publishing and GitHub Release
+
+No manual version or changelog updates are needed.
 
 ## Quick Start
 
 **Install for development:**
 
 ```bash
-cd /path/to/scripts
+cd /path/to/azure-deploy-cli
 pip install -e ".[dev]"
-ccc --help
+azd --help
 ```
 
 **Use in another project:**
@@ -25,10 +37,10 @@ pip install -e /path/to/scripts
 ## Installation
 
 | Method | Command |
-|--------|---------|
+|--------|----------|
 | Local development | `pip install -e ".[dev]"` |
-| Local changes | `pip install -e /path/to/scripts` |
-| From PyPI | `pip install git+https://github.com/klimatekompass/scripts@main` |
+| Local changes | `pip install -e /path/to/azure-deploy-cli` |
+| From PyPI | `pip install azure-deploy-cli` |
 
 ## CLI Commands
 
@@ -41,7 +53,7 @@ The ACA deployment process is split into two stages for better control:
 Deploy a new container revision without affecting traffic:
 
 ```bash
-ccc azaca deploy \
+azd azaca deploy \
   --resource-group my-rg \
   --location westus2 \
   --container-app-env my-env \
@@ -73,7 +85,7 @@ This command:
 Update traffic distribution and deactivate old revisions:
 
 ```bash
-ccc azaca update-traffic \
+azd azaca update-traffic \
   --resource-group my-rg \
   --container-app my-app \
   --label-stage-traffic prod=100 staging=0
@@ -89,22 +101,22 @@ This command:
 
 ```bash
 # Blue-Green Deployment (100% to new prod)
-ccc azaca update-traffic --resource-group my-rg --container-app my-app \
+azd azaca update-traffic --resource-group my-rg --container-app my-app \
   --label-stage-traffic prod=100 staging=0
 
 # Canary Deployment (90% prod, 10% staging)
-ccc azaca update-traffic --resource-group my-rg --container-app my-app \
+azd azaca update-traffic --resource-group my-rg --container-app my-app \
   --label-stage-traffic prod=90 staging=10
 
 # Multi-Environment (split traffic across multiple labels)
-ccc azaca update-traffic --resource-group my-rg --container-app my-app \
+azd azaca update-traffic --resource-group my-rg --container-app my-app \
   --label-stage-traffic prod=70 staging=20 dev=10
 ```
 
 ### Create Service Principal & Assign Roles
 
 ```bash
-ccc create-and-assign \
+azd create-and-assign \
   --sp-name my-app \
   --roles-config roles.json \
   --env-vars-files .env.local \
@@ -115,19 +127,19 @@ ccc create-and-assign \
 ### Reset Credentials
 
 ```bash
-ccc reset-credentials --sp-name <SP_NAME> --env-file .env.credentials
+azd reset-credentials --sp-name <SP_NAME> --env-file .env.credentials
 ```
 
 ### Login with Credentials
 
 ```bash
-ccc login --env-file .env.credentials
+azd login --env-file .env.credentials
 ```
 
 ## Python API
 
 ```python
-from cc_scripts import create_sp, assign_roles, RoleConfig
+from azure_deploy_cli import create_sp, assign_roles, RoleConfig
 
 # Create service principal
 result = create_sp("my-app")
@@ -170,7 +182,7 @@ cat > roles-config.json << 'EOF'
 EOF
 
 # 2. Create service principal and assign roles
-ccc create-and-assign \
+azd create-and-assign \
   --sp-name my-app-sp \
   --roles-config roles-config.json \
   --env-vars-files .env.local \
@@ -192,20 +204,6 @@ make clean          # Remove build artifacts
 
 Commit using [Conventional Commits](https://www.conventionalcommits.org/) format (e.g., `feat: add feature`, `fix: resolve bug`)
 
-**In grantcompass-scraper:**
-
-```bash
-pip install -e ../scripts
-# Then use: from cc_scripts import create_sp, assign_roles
-```
-
-**In grantcompass-webapp:**
-
-```bash
-pip install -e ../scripts
-# Then use in scripts: ccc create-and-assign ...
-```
-
 ## Scripting and Output Handling
 
 This CLI is designed for both interactive use and automated scripting. To support this, it follows the standard practice of separating output streams:
@@ -220,7 +218,7 @@ This allows you to cleanly capture command output while still seeing logs in you
 To save the parsable output to a file, redirect `stdout`:
 
 ```bash
-ccc azaca deploy ... > deployment_output.txt
+azd azaca deploy ... > deployment_output.txt
 ```
 
 The `deployment_output.txt` file will contain only the `REVISION_NAME=...` and `REVISION_URL=...` lines, without any of the logging messages.
@@ -230,7 +228,7 @@ The `deployment_output.txt` file will contain only the `REVISION_NAME=...` and `
 If you want to completely suppress the log messages (e.g., in a CI/CD script), redirect `stderr` to `/dev/null`:
 
 ```bash
-ccc azaca deploy ... 2>/dev/null
+azd azaca deploy ... 2>/dev/null
 ```
 
 ### Parsing Output in Scripts
@@ -240,7 +238,7 @@ You can pipe the output to standard Unix tools like `grep` and `cut` to extract 
 #### Example: Get the revision name
 
 ```bash
-REVISION_NAME=$(ccc azaca deploy ... 2>/dev/null | grep REVISION_NAME | cut -d'=' -f2)
+REVISION_NAME=$(azd azaca deploy ... 2>/dev/null | grep REVISION_NAME | cut -d'=' -f2)
 echo "Deployed revision: $REVISION_NAME"
 ```
 
@@ -253,15 +251,15 @@ Available levels: `debug`, `info`, `warning`, `error`, `critical`, `none`.
 #### Example: Enable debug logging
 
 ```bash
-ccc --log-level debug azaca deploy ...
+azd --log-level debug azaca deploy ...
 ```
 
 #### Example: Suppress all logs
 
 ```bash
-ccc --log-level none azaca deploy ...
+azd --log-level none azaca deploy ...
 ```
 
 ## License
 
-Proprietary - Climate Compass Team
+Mozilla Public License 2.0 - See LICENSE file for details

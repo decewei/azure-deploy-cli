@@ -30,6 +30,5 @@ jobs:
           private-key: ${{ secrets.ACTION_BOT_PRIVATE_KEY }}
           source-branch: 'main'
           target-branch: 'release'
-          review-team: '@klimatekompass/release-team'
           label: 'release:required-approval'
           close-label: 'release:cancelled'

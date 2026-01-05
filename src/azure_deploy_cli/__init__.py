@@ -1,4 +1,4 @@
-from cc_scripts.identity import (
+from azure_deploy_cli.identity import (
     AzureGroup,
     ManagedIdentity,
     RoleConfig,
@@ -16,13 +16,13 @@ from cc_scripts.identity import (
 
 # Get version using standard importlib.metadata (preferred method)
 try:
-    from importlib.metadata import version, PackageNotFoundError
-    
-    __version__ = version("cc-scripts")
+    from importlib.metadata import PackageNotFoundError, version
+
+    __version__ = version("azure-deploy-cli")
 except PackageNotFoundError:
     # Fallback to setuptools-scm generated file
     try:
-        from cc_scripts._version import __version__
+        from azure_deploy_cli._version import __version__
     except ImportError:
         # Final fallback for development installations without git
         __version__ = "0.0.0.dev0"

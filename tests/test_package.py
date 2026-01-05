@@ -1,29 +1,29 @@
-import cc_scripts
+import azure_deploy_cli
 
 
 class TestPackageExports:
     def test_version_is_defined(self):
-        assert hasattr(cc_scripts, "__version__")
+        assert hasattr(azure_deploy_cli, "__version__")
         # Version is now dynamic from setuptools-scm, so just check it's a string
-        assert isinstance(cc_scripts.__version__, str)
-        assert len(cc_scripts.__version__) > 0
+        assert isinstance(azure_deploy_cli.__version__, str)
+        assert len(azure_deploy_cli.__version__) > 0
 
     def test_model_exports(self):
-        assert hasattr(cc_scripts, "SPAuthCredentials")
-        assert hasattr(cc_scripts, "SPAuthCredentialsWithSecret")
-        assert hasattr(cc_scripts, "SPCreateResult")
-        assert hasattr(cc_scripts, "RoleConfig")
-        assert hasattr(cc_scripts, "RoleDefinition")
-        assert hasattr(cc_scripts, "ManagedIdentity")
-        assert hasattr(cc_scripts, "AzureGroup")
+        assert hasattr(azure_deploy_cli, "SPAuthCredentials")
+        assert hasattr(azure_deploy_cli, "SPAuthCredentialsWithSecret")
+        assert hasattr(azure_deploy_cli, "SPCreateResult")
+        assert hasattr(azure_deploy_cli, "RoleConfig")
+        assert hasattr(azure_deploy_cli, "RoleDefinition")
+        assert hasattr(azure_deploy_cli, "ManagedIdentity")
+        assert hasattr(azure_deploy_cli, "AzureGroup")
 
     def test_function_exports(self):
-        assert hasattr(cc_scripts, "create_sp")
-        assert hasattr(cc_scripts, "reset_sp_credentials")
-        assert hasattr(cc_scripts, "create_or_get_user_identity")
-        assert hasattr(cc_scripts, "delete_user_identity")
-        assert hasattr(cc_scripts, "get_identity_principal_id")
-        assert hasattr(cc_scripts, "assign_roles")
+        assert hasattr(azure_deploy_cli, "create_sp")
+        assert hasattr(azure_deploy_cli, "reset_sp_credentials")
+        assert hasattr(azure_deploy_cli, "create_or_get_user_identity")
+        assert hasattr(azure_deploy_cli, "delete_user_identity")
+        assert hasattr(azure_deploy_cli, "get_identity_principal_id")
+        assert hasattr(azure_deploy_cli, "assign_roles")
 
     def test_all_exports_match_all_list(self):
         expected_exports = [
@@ -42,4 +42,4 @@ class TestPackageExports:
             "assign_roles",
         ]
         for export in expected_exports:
-            assert export in cc_scripts.__all__, f"{export} not in __all__"
+            assert export in azure_deploy_cli.__all__, f"{export} not in __all__"

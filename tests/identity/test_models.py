@@ -1,6 +1,6 @@
 import pytest
 
-from cc_scripts.identity.models import (
+from azure_deploy_cli.identity.models import (
     AzureGroup,
     ManagedIdentity,
     RoleConfig,

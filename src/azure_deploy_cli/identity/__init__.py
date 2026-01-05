@@ -1,10 +1,10 @@
-import cc_scripts.identity.identity_cli
-from cc_scripts.identity.managed_identity import (
+import azure_deploy_cli.identity.identity_cli
+from azure_deploy_cli.identity.managed_identity import (
     create_or_get_user_identity,
     delete_user_identity,
     get_identity_principal_id,
 )
-from cc_scripts.identity.models import (
+from azure_deploy_cli.identity.models import (
     AzureGroup,
     ManagedIdentity,
     RoleConfig,
@@ -13,8 +13,8 @@ from cc_scripts.identity.models import (
     SPAuthCredentialsWithSecret,
     SPCreateResult,
 )
-from cc_scripts.identity.role import assign_roles
-from cc_scripts.identity.service_principal import create_sp, reset_sp_credentials
+from azure_deploy_cli.identity.role import assign_roles
+from azure_deploy_cli.identity.service_principal import create_sp, reset_sp_credentials
 
 __version__ = "0.1.0"
 

@@ -4,7 +4,7 @@ import argparse
 
 import pytest
 
-from cc_scripts.aca.aca_cli import _label_weight_pair
+from azure_deploy_cli.aca.aca_cli import _label_weight_pair
 
 
 class TestParseLabelWeightPair:

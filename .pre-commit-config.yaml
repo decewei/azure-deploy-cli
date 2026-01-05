@@ -37,3 +37,13 @@ repos:
         args: ['--maxkb=1000']
       - id: check-merge-conflict
       - id: detect-private-key
+
+  # Prevent committing sensitive Azure credentials
+  - repo: local
+    hooks:
+      - id: block-azure-credentials
+        name: Block Azure Credentials
+        entry: bash -c 'grep -rE "(clientSecret|privateKey|password|connection.?string)" --include="*.py" --include="*.json" src/ tests/ || true; [[ $? -eq 1 ]]'
+        language: system
+        types: [python, json]
+        stages: [commit]

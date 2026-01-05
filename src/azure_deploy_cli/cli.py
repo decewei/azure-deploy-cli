@@ -11,12 +11,12 @@ def main() -> None:
     Main CLI entry point
 
     Routes to different tool namespaces:
-    - cc azid: Azure identity management (service principals, credentials, RBAC)
-    - cc <other>: Other tools (added in future)
+    - azid: Azure identity management (service principals, credentials, RBAC)
+    - azaca: Azure Container Apps management (identity and role setup)
     """
     parser = argparse.ArgumentParser(
-        description="Climate Compass Utilities",
-        prog="ccc",
+        description="Azure Deploy CLI",
+        prog="azd",
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="""
 Namespaces:

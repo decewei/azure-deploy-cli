@@ -2,17 +2,17 @@ from unittest.mock import Mock, patch
 
 import pytest
 
-from cc_scripts.aca.deploy_aca import (
+from azure_deploy_cli.aca.deploy_aca import (
     deploy_revision,
     get_aca_docker_image_name,
 )
-from cc_scripts.utils.docker import pull_image, pull_retag_and_push_image, tag_image
+from azure_deploy_cli.utils.docker import pull_image, pull_retag_and_push_image, tag_image
 
 
 class TestRetagImage:
     """Tests for image retagging functionality."""
 
-    @patch("cc_scripts.utils.docker.subprocess.run")
+    @patch("azure_deploy_cli.utils.docker.subprocess.run")
     def test_pull_image_success(self, mock_run):
         """Test successful image pull."""
         mock_run.return_value = Mock(returncode=0)
@@ -23,14 +23,14 @@ class TestRetagImage:
             text=True,
         )
 
-    @patch("cc_scripts.utils.docker.subprocess.run")
+    @patch("azure_deploy_cli.utils.docker.subprocess.run")
     def test_pull_image_failure(self, mock_run):
         """Test image pull failure."""
         mock_run.return_value = Mock(returncode=1, stderr="Image not found")
         with pytest.raises(RuntimeError, match="Docker pull failed"):
             pull_image("registry.io/myapp:nonexistent")
 
-    @patch("cc_scripts.utils.docker.subprocess.run")
+    @patch("azure_deploy_cli.utils.docker.subprocess.run")
     def test_tag_image_success(self, mock_run):
         """Test successful image tagging."""
         mock_run.return_value = Mock(returncode=0)
@@ -41,20 +41,18 @@ class TestRetagImage:
             text=True,
         )
 
-    @patch("cc_scripts.utils.docker.subprocess.run")
+    @patch("azure_deploy_cli.utils.docker.subprocess.run")
     def test_tag_image_failure(self, mock_run):
         """Test image tagging failure."""
         mock_run.return_value = Mock(returncode=1, stderr="Tag failed")
         with pytest.raises(RuntimeError, match="Docker tag failed"):
             tag_image("registry.io/myapp:old", "registry.io/myapp:new")
 
-    @patch("cc_scripts.utils.docker.push_image")
-    @patch("cc_scripts.utils.docker.tag_image")
-    @patch("cc_scripts.utils.docker.pull_image")
-    @patch("cc_scripts.utils.docker.image_exists")
-    def test_retag_and_push_image_success(
-        self, mock_exists, mock_pull, mock_tag, mock_push
-    ):
+    @patch("azure_deploy_cli.utils.docker.push_image")
+    @patch("azure_deploy_cli.utils.docker.tag_image")
+    @patch("azure_deploy_cli.utils.docker.pull_image")
+    @patch("azure_deploy_cli.utils.docker.image_exists")
+    def test_retag_and_push_image_success(self, mock_exists, mock_pull, mock_tag, mock_push):
         """Test successful image retagging and push."""
         mock_exists.return_value = False
         pull_retag_and_push_image(
@@ -68,13 +66,11 @@ class TestRetagImage:
         )
         mock_push.assert_called_once_with("registry.azurecr.io/myapp:new-tag")
 
-    @patch("cc_scripts.utils.docker.push_image")
-    @patch("cc_scripts.utils.docker.tag_image")
-    @patch("cc_scripts.utils.docker.pull_image")
-    @patch("cc_scripts.utils.docker.image_exists")
-    def test_retag_and_push_image_pull_failure(
-        self, mock_exists, mock_pull, mock_tag, mock_push
-    ):
+    @patch("azure_deploy_cli.utils.docker.push_image")
+    @patch("azure_deploy_cli.utils.docker.tag_image")
+    @patch("azure_deploy_cli.utils.docker.pull_image")
+    @patch("azure_deploy_cli.utils.docker.image_exists")
+    def test_retag_and_push_image_pull_failure(self, mock_exists, mock_pull, mock_tag, mock_push):
         """Test retagging failure when image doesn't exist."""
         mock_exists.return_value = False
         mock_pull.side_effect = RuntimeError("Docker pull failed: Image not found")
@@ -93,10 +89,10 @@ class TestRetagImage:
 class TestDeployRevisionWithRetag:
     """Tests for deploy_revision with existing_image_tag parameter."""
 
-    @patch("cc_scripts.aca.deploy_aca._wait_for_revision_activation")
-    @patch("cc_scripts.aca.deploy_aca._get_container_app")
-    @patch("cc_scripts.utils.docker.pull_retag_and_push_image")
-    @patch("cc_scripts.aca.deploy_aca._prepare_secrets_and_env_vars")
+    @patch("azure_deploy_cli.aca.deploy_aca._wait_for_revision_activation")
+    @patch("azure_deploy_cli.aca.deploy_aca._get_container_app")
+    @patch("azure_deploy_cli.utils.docker.pull_retag_and_push_image")
+    @patch("azure_deploy_cli.aca.deploy_aca._prepare_secrets_and_env_vars")
     def test_deploy_revision_with_existing_image_tag(
         self, mock_prepare_secrets, mock_retag, mock_get_app, mock_wait
     ):
@@ -159,9 +155,9 @@ class TestDeployRevisionWithRetag:
         assert result.revision_name == "myapp--prod-20231215120000"
         assert result.active is True
 
-    @patch("cc_scripts.aca.deploy_aca._get_container_app")
-    @patch("cc_scripts.utils.docker.pull_retag_and_push_image")
-    @patch("cc_scripts.aca.deploy_aca._prepare_secrets_and_env_vars")
+    @patch("azure_deploy_cli.aca.deploy_aca._get_container_app")
+    @patch("azure_deploy_cli.utils.docker.pull_retag_and_push_image")
+    @patch("azure_deploy_cli.aca.deploy_aca._prepare_secrets_and_env_vars")
     def test_deploy_revision_with_nonexistent_image_tag(
         self, mock_prepare_secrets, mock_retag, mock_get_app
     ):
@@ -203,10 +199,10 @@ class TestDeployRevisionWithRetag:
                 existing_image_tag="nonexistent-tag",
             )
 
-    @patch("cc_scripts.aca.deploy_aca._wait_for_revision_activation")
-    @patch("cc_scripts.aca.deploy_aca._get_container_app")
-    @patch("cc_scripts.utils.docker.pull_retag_and_push_image")
-    @patch("cc_scripts.aca.deploy_aca._prepare_secrets_and_env_vars")
+    @patch("azure_deploy_cli.aca.deploy_aca._wait_for_revision_activation")
+    @patch("azure_deploy_cli.aca.deploy_aca._get_container_app")
+    @patch("azure_deploy_cli.utils.docker.pull_retag_and_push_image")
+    @patch("azure_deploy_cli.aca.deploy_aca._prepare_secrets_and_env_vars")
     def test_deploy_revision_without_existing_image_tag(
         self, mock_prepare_secrets, mock_retag, mock_get_app, mock_wait
     ):
