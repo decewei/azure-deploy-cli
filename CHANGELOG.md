@@ -11,3 +11,5 @@
 ### ⚙️ Miscellaneous Tasks
 
 - Fix workflow permissions (#3)
+
+## Dummy

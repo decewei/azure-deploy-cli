@@ -58,7 +58,6 @@ jobs:
         uses: CSchoel/release-notes-from-changelog@v1
         with:
           version: ${{ github.ref_name }}
-          changelog_path: CHANGELOG.md
 
       - name: Create GitHub Release
         uses: actions/create-release@v1
