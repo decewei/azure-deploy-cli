@@ -137,3 +137,5 @@ major_version_zero = true
 # setuptools-scm configuration for automatic versioning
 [tool.setuptools_scm]
 version_file = "src/azure_deploy_cli/_version.py"
+version_scheme = "no-guess-dev"
+local_scheme = "no-local-version"
