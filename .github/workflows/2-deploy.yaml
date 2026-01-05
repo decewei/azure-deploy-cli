@@ -1,4 +1,4 @@
-seename: deploy-callable
+name: deploy-callable
 
 on:
   workflow_call:
