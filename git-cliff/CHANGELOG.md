@@ -1,9 +1,9 @@
-## [0.1.4] - 2026-01-05
+## [0.1.5] - 2026-01-05
 
 ### 🐛 Bug Fixes
 
-- Version and tag and pypi publish permissions
+- Fix permissions
 
 ### ⚙️ Miscellaneous Tasks
 
-- *(release)* Bump version to 0.1.4 [skip ci]
+- *(release)* Bump version to 0.1.5 [skip ci]
