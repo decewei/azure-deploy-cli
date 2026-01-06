@@ -85,9 +85,14 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
+          RELEASE_NOTES="${{ runner.temp }}/release-notes.md"
+          cat > "$RELEASE_NOTES" << 'EOF'
+          ${{ steps.changelog.outputs.changelog }}
+          EOF
+
           ARGS=("${{ needs.version-and-tag.outputs.tag }}")
           ARGS+=(--title "Release ${{ needs.version-and-tag.outputs.tag }}")
-          ARGS+=(--notes "${{ steps.changelog.outputs.changelog }}")
+          ARGS+=(--notes-file "$RELEASE_NOTES")
 
           if [[ "${{ contains(github.event.pull_request.labels.*.name, 'release:candidate') }}" == "true" ]]; then
             ARGS+=(--prerelease)
