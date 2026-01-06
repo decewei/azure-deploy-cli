@@ -75,8 +75,9 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          # Build release notes
-          cat > release-notes.md << 'EOF'
+          # Build release notes in temp directory
+          RELEASE_NOTES="${{ runner.temp }}/release-notes.md"
+          cat > "$RELEASE_NOTES" << 'EOF'
           ## Changes
 
           ${{ steps.changelog.outputs.changelog }}
@@ -91,13 +92,13 @@ jobs:
 
           # Build command with conditional prerelease flag
           PRERELEASE_FLAG=""
-          if [ "${{ inputs.enable-prerelease }}" == "true" ]; then
+          if [[ "${{ inputs.enable-prerelease }}" == "true" ]]; then
             PRERELEASE_FLAG="--prerelease"
           fi
 
           # Create release
           gh release create "${{ inputs.tag }}" \
             --title "Release ${{ inputs.tag }}" \
-            --notes-file release-notes.md \
+            --notes-file "$RELEASE_NOTES" \
             $PRERELEASE_FLAG \
             dist/*
