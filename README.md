@@ -71,7 +71,8 @@ azd azaca deploy \
   --keyvault-name my-keyvault \
   --dockerfile ./Dockerfile \
   --env-vars ENV_VAR1 ENV_VAR2 \
-  --env-var-secrets SECRET1 SECRET2
+  --env-var-secrets SECRET1 SECRET2 \
+  --probe-config ./probe-config.yaml
 ```
 
 This command:
@@ -112,6 +113,55 @@ azd azaca update-traffic --resource-group my-rg --container-app my-app \
 azd azaca update-traffic --resource-group my-rg --container-app my-app \
   --label-stage-traffic prod=70 staging=20 dev=10
 ```
+
+#### Health Probe Configuration
+
+You can specify health probes (liveness, readiness, startup) using a YAML configuration file that follows the Azure Container Apps ARM template format:
+
+**Example probe-config.yaml:**
+
+```yaml
+properties:
+  template:
+    containers:
+    - name: my-app
+      probes:
+      - type: Liveness
+        httpGet:
+          path: /health
+          port: 8080
+          scheme: HTTP
+        initialDelaySeconds: 10
+        periodSeconds: 30
+        timeoutSeconds: 5
+        failureThreshold: 3
+        
+      - type: Readiness
+        httpGet:
+          path: /ready
+          port: 8080
+        initialDelaySeconds: 5
+        periodSeconds: 10
+        
+      - type: Startup
+        tcpSocket:
+          port: 8080
+        initialDelaySeconds: 0
+        periodSeconds: 5
+        failureThreshold: 30
+```
+
+Use it with the `--probe-config` flag:
+
+```bash
+azd azaca deploy \
+  --resource-group my-rg \
+  --container-app my-app \
+  --probe-config ./probe-config.yaml \
+  # ... other parameters ...
+```
+
+The YAML format follows the Azure Container Apps resource template structure, making it compatible with configurations used by the `az containerapp` CLI.
 
 ### Create Service Principal & Assign Roles
 

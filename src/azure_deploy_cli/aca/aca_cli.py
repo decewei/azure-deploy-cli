@@ -198,6 +198,7 @@ def cli_deploy(args: Any) -> None:
             ),
             env_var_names=args.env_vars,
             existing_image_tag=args.existing_image_tag,
+            probe_config_path=args.probe_config if hasattr(args, "probe_config") else None,
         )
 
         if args.custom_domains:
@@ -462,6 +463,14 @@ def add_commands(subparsers: argparse._SubParsersAction) -> None:
         required=True,
         type=str,
         help="Path to the Dockerfile for building the container image.",
+    )
+
+    deploy_parser.add_argument(
+        "--probe-config",
+        required=False,
+        type=Path,
+        help="Path to YAML file containing Azure Container Apps configuration "
+        "(follows Azure Resource Manager template format)",
     )
 
     deploy_parser.set_defaults(func=cli_deploy)

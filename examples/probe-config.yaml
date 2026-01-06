@@ -1,0 +1,32 @@
+properties:
+  template:
+    containers:
+    - name: my-app
+      probes:
+      - type: Liveness
+        httpGet:
+          path: /health
+          port: 8080
+          scheme: HTTP
+          httpHeaders:
+          - name: Custom-Header
+            value: ReadinessCheck
+        initialDelaySeconds: 10
+        periodSeconds: 30
+        timeoutSeconds: 5
+        failureThreshold: 3
+        successThreshold: 1
+        
+      - type: Readiness
+        httpGet:
+          path: /ready
+          port: 8080
+        initialDelaySeconds: 5
+        periodSeconds: 10
+        
+      - type: Startup
+        tcpSocket:
+          port: 8080
+        initialDelaySeconds: 0
+        periodSeconds: 5
+        failureThreshold: 30
