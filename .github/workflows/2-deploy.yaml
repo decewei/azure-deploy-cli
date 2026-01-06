@@ -72,21 +72,33 @@ jobs:
           version: ${{ inputs.tag }}
 
       - name: Create GitHub Release
-        uses: actions/create-release@v1
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          tag_name: ${{ inputs.tag }}
-          release_name: Release ${{ inputs.tag }}
-          prerelease: ${{ inputs.enable-prerelease || false }}
-          body: |
-            ## Changes
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          # Build release notes
+          cat > release-notes.md << 'EOF'
+          ## Changes
 
-            ${{ steps.changelog.outputs.changelog }}
+          ${{ steps.changelog.outputs.changelog }}
 
-            ## Installation
+          ## Installation
 
-            Install from PyPI:
-            ```bash
-            pip install azure-deploy-cli
-            ```
+          Install from PyPI:
+          ```bash
+          pip install azure-deploy-cli
+          ```
+          EOF
+
+          # Create release with conditional prerelease flag
+          if [ "${{ inputs.enable-prerelease }}" == "true" ]; then
+            gh release create "${{ inputs.tag }}" \
+              --title "Release ${{ inputs.tag }}" \
+              --notes-file release-notes.md \
+              --prerelease \
+              dist/*
+          else
+            gh release create "${{ inputs.tag }}" \
+              --title "Release ${{ inputs.tag }}" \
+              --notes-file release-notes.md \
+              dist/*
+          fi
