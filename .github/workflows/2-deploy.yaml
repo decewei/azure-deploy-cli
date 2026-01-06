@@ -75,22 +75,13 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          # Build release notes in temp directory
           RELEASE_NOTES="${{ runner.temp }}/release-notes.md"
           cat > "$RELEASE_NOTES" << 'EOF'
           ## Changes
 
           ${{ steps.changelog.outputs.changelog }}
-
-          ## Installation
-
-          Install from PyPI:
-          ```bash
-          pip install azure-deploy-cli
-          ```
           EOF
 
-          # Build command args with conditional prerelease flag
           ARGS=("${{ inputs.tag }}")
           ARGS+=(--title "Release ${{ inputs.tag }}")
           ARGS+=(--notes-file "$RELEASE_NOTES")
@@ -99,10 +90,8 @@ jobs:
             ARGS+=(--prerelease)
           fi
 
-          # Add dist files if they exist
           if compgen -G "dist/*" > /dev/null; then
             ARGS+=(dist/*)
           fi
 
-          # Create release
           gh release create "${ARGS[@]}"
