@@ -38,6 +38,7 @@ from azure.mgmt.keyvault.models import SecretCreateOrUpdateParameters, SecretPro
 from ..identity.models import ManagedIdentity
 from ..utils import docker
 from ..utils.logging import get_logger
+from ..utils.yaml_loader import load_container_app_yaml
 from .model import RevisionDeploymentResult, SecretKeyVaultConfig
 
 logger = get_logger(__name__)
@@ -286,8 +287,6 @@ def deploy_revision(
     # Load probes from config if provided
     probes = None
     if probe_config_path:
-        from ..utils.yaml_loader import load_container_app_yaml
-
         logger.info(f"Loading configuration from '{probe_config_path}'...")
         config = load_container_app_yaml(probe_config_path)
         probes = _extract_probes_from_config(config, container_app_name)

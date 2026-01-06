@@ -198,7 +198,7 @@ def cli_deploy(args: Any) -> None:
             ),
             env_var_names=args.env_vars,
             existing_image_tag=args.existing_image_tag,
-            probe_config_path=args.probe_config if hasattr(args, "probe_config") else None,
+            probe_config_path=getattr(args, "probe_config", None),
         )
 
         if args.custom_domains:

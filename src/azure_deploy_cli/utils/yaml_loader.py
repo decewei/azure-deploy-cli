@@ -4,6 +4,9 @@ from typing import Any
 import yaml
 from azure.mgmt.appcontainers.models import ContainerApp
 
+# Placeholder value for location field (required by SDK but not used for probe extraction)
+LOCATION_PLACEHOLDER = "placeholder"
+
 
 def load_container_app_yaml(yaml_path: Path) -> ContainerApp:
     """
@@ -26,7 +29,7 @@ def load_container_app_yaml(yaml_path: Path) -> ContainerApp:
         # Extract properties and merge with top-level keys like location, tags, etc.
         properties = data["properties"]
         # Location is required, but we'll use a placeholder since we only care about template/config
-        return ContainerApp(location=data.get("location", "placeholder"), **properties)
+        return ContainerApp(location=data.get("location", LOCATION_PLACEHOLDER), **properties)
     else:
         # If it's just the properties directly
-        return ContainerApp(location="placeholder", **data)
+        return ContainerApp(location=LOCATION_PLACEHOLDER, **data)
