@@ -89,16 +89,15 @@ jobs:
           ```
           EOF
 
-          # Create release with conditional prerelease flag
+          # Build command with conditional prerelease flag
+          PRERELEASE_FLAG=""
           if [ "${{ inputs.enable-prerelease }}" == "true" ]; then
-            gh release create "${{ inputs.tag }}" \
-              --title "Release ${{ inputs.tag }}" \
-              --notes-file release-notes.md \
-              --prerelease \
-              dist/*
-          else
-            gh release create "${{ inputs.tag }}" \
-              --title "Release ${{ inputs.tag }}" \
-              --notes-file release-notes.md \
-              dist/*
+            PRERELEASE_FLAG="--prerelease"
           fi
+
+          # Create release
+          gh release create "${{ inputs.tag }}" \
+            --title "Release ${{ inputs.tag }}" \
+            --notes-file release-notes.md \
+            $PRERELEASE_FLAG \
+            dist/*
