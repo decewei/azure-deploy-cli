@@ -1,3 +1,14 @@
+## [0.1.11] - 2026-01-06
+
+### 🐛 Bug Fixes
+
+- Enable token in pypi and rm empty changelog
+## [0.1.10] - 2026-01-05
+
+### ⚙️ Miscellaneous Tasks
+
+- Delete git-cliff directory
+- *(release)* Bump version to 0.1.10 [skip ci]
 ## [0.1.9] - 2026-01-05
 
 ### 🐛 Bug Fixes
@@ -96,5 +107,3 @@
 ### ⚙️ Miscellaneous Tasks
 
 - Fix workflow permissions (#3)
-
-## Dummy
