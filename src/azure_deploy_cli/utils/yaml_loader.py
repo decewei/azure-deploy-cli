@@ -1,4 +1,5 @@
 from pathlib import Path
+from typing import Any
 
 import yaml
 from azure.mgmt.appcontainers.models import ContainerApp
@@ -16,13 +17,16 @@ def load_container_app_yaml(yaml_path: Path) -> ContainerApp:
     Returns:
         ContainerApp model instance with all configuration
     """
-    with open(yaml_path, "r") as f:
-        data = yaml.safe_load(f)
+    with open(yaml_path) as f:
+        data: dict[str, Any] = yaml.safe_load(f)
 
     # The SDK models can be instantiated directly from dictionaries
     # If the YAML has a top-level 'properties' key (ARM template format)
     if "properties" in data:
-        return ContainerApp(**data)
+        # Extract properties and merge with top-level keys like location, tags, etc.
+        properties = data["properties"]
+        # Location is required, but we'll use a placeholder since we only care about template/config
+        return ContainerApp(location=data.get("location", "placeholder"), **properties)
     else:
         # If it's just the properties directly
-        return ContainerApp(properties=data)
+        return ContainerApp(location="placeholder", **data)

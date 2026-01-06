@@ -210,10 +210,10 @@ def _extract_probes_from_config(
     Returns:
         List of probes if found, None otherwise
     """
-    if not config.properties or not config.properties.template:
+    if not config.template:
         return None
 
-    template = config.properties.template
+    template = config.template
     if not template.containers:
         return None
 
@@ -282,7 +282,7 @@ def deploy_revision(
                      but the image doesn't exist
     """
     logger.info(f"Deploying new revision for Container App '{container_app_name}'...")
-    
+
     # Load probes from config if provided
     probes = None
     if probe_config_path:
@@ -295,7 +295,7 @@ def deploy_revision(
             logger.info(f"Loaded {len(probes)} probe(s) from configuration")
         else:
             logger.warning("No probes found in configuration file")
-    
+
     secret_key_vault_config.secret_names.append(registry_pass_env_name)
     secrets, env_vars = _prepare_secrets_and_env_vars(
         secret_config=secret_key_vault_config,
