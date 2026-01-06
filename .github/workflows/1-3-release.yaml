@@ -52,13 +52,6 @@ jobs:
     needs: [version-and-tag]
     runs-on: ubuntu-latest
     steps:
-      - name: Configure git authentication
-        id: auth
-        uses: decewei/deploy-tools/actions/configure-git-auth@release
-        with:
-          app-id: ${{ vars.ACTION_BOT_APP_ID }}
-          private-key: ${{ secrets.ACTION_BOT_PRIVATE_KEY }}
-
       - uses: actions/checkout@v6
         with:
           fetch-depth: 0
@@ -92,16 +85,9 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          RELEASE_NOTES="${{ runner.temp }}/release-notes.md"
-          cat > "$RELEASE_NOTES" << 'EOF'
-          ## Changes
-
-          ${{ steps.changelog.outputs.changelog }}
-          EOF
-
           ARGS=("${{ needs.version-and-tag.outputs.tag }}")
           ARGS+=(--title "Release ${{ needs.version-and-tag.outputs.tag }}")
-          ARGS+=(--notes-file "$RELEASE_NOTES")
+          ARGS+=(--notes "${{ steps.changelog.outputs.changelog }}")
 
           if [[ "${{ contains(github.event.pull_request.labels.*.name, 'release:candidate') }}" == "true" ]]; then
             ARGS+=(--prerelease)
