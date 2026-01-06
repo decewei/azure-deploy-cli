@@ -72,21 +72,26 @@ jobs:
           version: ${{ inputs.tag }}
 
       - name: Create GitHub Release
-        uses: actions/create-release@v1
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          tag_name: ${{ inputs.tag }}
-          release_name: Release ${{ inputs.tag }}
-          prerelease: ${{ inputs.enable-prerelease || false }}
-          body: |
-            ## Changes
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          RELEASE_NOTES="${{ runner.temp }}/release-notes.md"
+          cat > "$RELEASE_NOTES" << 'EOF'
+          ## Changes
 
-            ${{ steps.changelog.outputs.changelog }}
+          ${{ steps.changelog.outputs.changelog }}
+          EOF
 
-            ## Installation
+          ARGS=("${{ inputs.tag }}")
+          ARGS+=(--title "Release ${{ inputs.tag }}")
+          ARGS+=(--notes-file "$RELEASE_NOTES")
 
-            Install from PyPI:
-            ```bash
-            pip install azure-deploy-cli
-            ```
+          if [[ "${{ inputs.enable-prerelease }}" == "true" ]]; then
+            ARGS+=(--prerelease)
+          fi
+
+          if compgen -G "dist/*" > /dev/null; then
+            ARGS+=(dist/*)
+          fi
+
+          gh release create "${ARGS[@]}"
