@@ -90,15 +90,19 @@ jobs:
           ```
           EOF
 
-          # Build command with conditional prerelease flag
-          PRERELEASE_FLAG=""
+          # Build command args with conditional prerelease flag
+          ARGS=("${{ inputs.tag }}")
+          ARGS+=(--title "Release ${{ inputs.tag }}")
+          ARGS+=(--notes-file "$RELEASE_NOTES")
+          
           if [[ "${{ inputs.enable-prerelease }}" == "true" ]]; then
-            PRERELEASE_FLAG="--prerelease"
+            ARGS+=(--prerelease)
+          fi
+
+          # Add dist files if they exist
+          if compgen -G "dist/*" > /dev/null; then
+            ARGS+=(dist/*)
           fi
 
           # Create release
-          gh release create "${{ inputs.tag }}" \
-            --title "Release ${{ inputs.tag }}" \
-            --notes-file "$RELEASE_NOTES" \
-            $PRERELEASE_FLAG \
-            dist/*
+          gh release create "${ARGS[@]}"
