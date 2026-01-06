@@ -94,7 +94,7 @@ jobs:
           ARGS=("${{ inputs.tag }}")
           ARGS+=(--title "Release ${{ inputs.tag }}")
           ARGS+=(--notes-file "$RELEASE_NOTES")
-          
+
           if [[ "${{ inputs.enable-prerelease }}" == "true" ]]; then
             ARGS+=(--prerelease)
           fi
