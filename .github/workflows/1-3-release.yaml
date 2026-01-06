@@ -50,12 +50,68 @@ jobs:
   deploy-prod:
     if: ${{ needs.version-and-tag.outputs.continue == 'true' }}
     needs: [version-and-tag]
-    uses: ./.github/workflows/2-deploy.yaml
-    secrets: inherit
-    with:
-      tag: ${{ needs.version-and-tag.outputs.tag }}
-      version: ${{ needs.version-and-tag.outputs.version }}
-      enable-prerelease: ${{ contains(github.event.pull_request.labels.*.name, 'release:candidate') }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Configure git authentication
+        id: auth
+        uses: decewei/deploy-tools/actions/configure-git-auth@release
+        with:
+          app-id: ${{ vars.ACTION_BOT_APP_ID }}
+          private-key: ${{ secrets.ACTION_BOT_PRIVATE_KEY }}
+
+      - uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+          ref: ${{ needs.version-and-tag.outputs.tag }}
+
+      - name: Set up Python 3.11
+        uses: actions/setup-python@v6
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+
+      - name: Install build dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install build
+
+      - name: Build package
+        run: |
+          python -m build
+
+      - name: Publish package distributions to PyPI
+        uses: pypa/gh-action-pypi-publish@release/v1
+
+      - name: Extract Changelog
+        id: changelog
+        uses: CSchoel/release-notes-from-changelog@v1
+        with:
+          version: ${{ needs.version-and-tag.outputs.tag }}
+
+      - name: Create GitHub Release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          RELEASE_NOTES="${{ runner.temp }}/release-notes.md"
+          cat > "$RELEASE_NOTES" << 'EOF'
+          ## Changes
+
+          ${{ steps.changelog.outputs.changelog }}
+          EOF
+
+          ARGS=("${{ needs.version-and-tag.outputs.tag }}")
+          ARGS+=(--title "Release ${{ needs.version-and-tag.outputs.tag }}")
+          ARGS+=(--notes-file "$RELEASE_NOTES")
+
+          if [[ "${{ contains(github.event.pull_request.labels.*.name, 'release:candidate') }}" == "true" ]]; then
+            ARGS+=(--prerelease)
+          fi
+
+          if compgen -G "dist/*" > /dev/null; then
+            ARGS+=(dist/*)
+          fi
+
+          gh release create "${ARGS[@]}"
 
   update-pr-label:
     needs: [deploy-prod, version-and-tag]
