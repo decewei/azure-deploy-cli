@@ -87,10 +87,6 @@ def _validate_cli_deploy(args: Any):
         raise ValueError("Role config provided without env vars files")
     elif args.role_env_vars_files:
         raise ValueError("Role env vars files provided without role config")
-    
-    # Container config is now required
-    if not args.container_config:
-        raise ValueError("Container configuration file (--container-config) is required")
 
 
 def cli_deploy(args: Any) -> None:
@@ -133,9 +129,9 @@ def cli_deploy(args: Any) -> None:
 
         # Load container configuration from YAML
         logger.critical(f"Loading container configuration from '{args.container_config}'...")
-        app_config = load_app_config_yaml(args.container_config)
+        container_configs = load_app_config_yaml(args.container_config)
         logger.critical(
-            f"Loaded configuration with {len(app_config.containers)} container(s)"
+            f"Loaded configuration with {len(container_configs)} container(s)"
         )
 
         logger.critical("Setting up managed identity and roles...")
@@ -174,10 +170,10 @@ def cli_deploy(args: Any) -> None:
             revision_suffix=revision_suffix,
             location=args.location,
             stage=args.stage,
-            container_configs=app_config.containers,
-            ingress_config=app_config.ingress,
-            min_replicas=app_config.min_replicas,
-            max_replicas=app_config.max_replicas,
+            container_configs=container_configs,
+            target_port=args.target_port,
+            min_replicas=args.min_replicas,
+            max_replicas=args.max_replicas,
             secret_key_vault_config=SecretKeyVaultConfig(
                 key_vault_client=key_vault_client,
                 key_vault_name=args.keyvault_name,
@@ -350,6 +346,28 @@ def add_commands(subparsers: argparse._SubParsersAction) -> None:
         type=str,
         help="Deployment stage label (e.g., staging, prod) used for revision naming.",
     )
+    
+    deploy_parser.add_argument(
+        "--target-port",
+        required=True,
+        type=int,
+        help="Target port for the container app ingress.",
+    )
+    
+    deploy_parser.add_argument(
+        "--min-replicas",
+        required=True,
+        type=int,
+        help="Minimum number of replicas for the container app.",
+    )
+    
+    deploy_parser.add_argument(
+        "--max-replicas",
+        required=True,
+        type=int,
+        help="Maximum number of replicas for the container app.",
+    )
+    
     deploy_parser.add_argument(
         "--env-var-secrets",
         required=False,

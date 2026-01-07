@@ -1,12 +1,3 @@
-ingress:
-  external: true
-  target_port: 8080
-  transport: auto
-
-scale:
-  min_replicas: 1
-  max_replicas: 10
-
 containers:
   - name: my-app
     image_name: my-image

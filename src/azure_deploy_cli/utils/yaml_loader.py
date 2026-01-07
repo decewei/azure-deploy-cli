@@ -20,38 +20,12 @@ class ContainerConfig:
     dockerfile: str | None = None  # Optional dockerfile path
 
 
-@dataclass
-class IngressConfig:
-    """Ingress configuration at app level."""
-
-    external: bool
-    target_port: int
-    transport: str = "auto"
-
-
-@dataclass
-class AppConfig:
-    """Full application configuration from YAML."""
-
-    containers: list[ContainerConfig]
-    ingress: IngressConfig | None = None
-    min_replicas: int = 1
-    max_replicas: int = 10
-
-
-def load_app_config_yaml(yaml_path: Path) -> AppConfig:
+def load_app_config_yaml(yaml_path: Path) -> list[ContainerConfig]:
     """
-    Load container app configuration from YAML file.
+    Load container configurations from YAML file.
 
     The YAML should have the following structure:
     ```yaml
-    ingress:
-      external: true
-      target_port: 8080
-      transport: auto  # optional, defaults to auto
-    scale:
-      min_replicas: 1  # optional, defaults to 1
-      max_replicas: 10  # optional, defaults to 10
     containers:
       - name: my-app
         image_name: my-image  # Just the image name
@@ -73,7 +47,7 @@ def load_app_config_yaml(yaml_path: Path) -> AppConfig:
         yaml_path: Path to the YAML configuration file
 
     Returns:
-        AppConfig instance with parsed configuration
+        List of ContainerConfig instances
 
     Raises:
         ValueError: If YAML structure is invalid
@@ -102,55 +76,30 @@ def load_app_config_yaml(yaml_path: Path) -> AppConfig:
         # Parse probes if present
         probes = None
         if "probes" in container_data and container_data["probes"]:
-            from azure.mgmt.appcontainers.models import (
-                ContainerAppProbe,
-                ContainerAppProbeHttpGet,
-                ContainerAppProbeHttpGetHttpHeadersItem,
-                ContainerAppProbeTcpSocket,
-            )
+            from azure.mgmt.appcontainers.models import ContainerAppProbe
 
+            # Try to load probes directly using SDK models
             probes = []
             for probe_data in container_data["probes"]:
-                probe_dict = dict(probe_data)
-                
-                # Convert httpGet to proper object if present
-                if "httpGet" in probe_dict and probe_dict["httpGet"]:
-                    http_get_data = probe_dict["httpGet"]
-                    headers = None
-                    if "httpHeaders" in http_get_data:
-                        headers = [
-                            ContainerAppProbeHttpGetHttpHeadersItem(**h)
-                            for h in http_get_data["httpHeaders"]
-                        ]
-                        http_get_data = dict(http_get_data)
-                        http_get_data["http_headers"] = headers
-                        del http_get_data["httpHeaders"]
-                    
-                    probe_dict["http_get"] = ContainerAppProbeHttpGet(**http_get_data)
-                    del probe_dict["httpGet"]
-                
-                # Convert tcpSocket to proper object if present
-                if "tcpSocket" in probe_dict and probe_dict["tcpSocket"]:
-                    tcp_data = probe_dict["tcpSocket"]
-                    probe_dict["tcp_socket"] = ContainerAppProbeTcpSocket(**tcp_data)
-                    del probe_dict["tcpSocket"]
-                
-                # Convert camelCase to snake_case for other fields
-                if "initialDelaySeconds" in probe_dict:
-                    probe_dict["initial_delay_seconds"] = probe_dict["initialDelaySeconds"]
-                    del probe_dict["initialDelaySeconds"]
-                if "periodSeconds" in probe_dict:
-                    probe_dict["period_seconds"] = probe_dict["periodSeconds"]
-                    del probe_dict["periodSeconds"]
-                if "timeoutSeconds" in probe_dict:
-                    probe_dict["timeout_seconds"] = probe_dict["timeoutSeconds"]
-                    del probe_dict["timeoutSeconds"]
-                if "failureThreshold" in probe_dict:
-                    probe_dict["failure_threshold"] = probe_dict["failureThreshold"]
-                    del probe_dict["failureThreshold"]
-                if "successThreshold" in probe_dict:
-                    probe_dict["success_threshold"] = probe_dict["successThreshold"]
-                    del probe_dict["successThreshold"]
+                # Convert camelCase keys to snake_case for SDK compatibility
+                probe_dict = {}
+                for key, value in probe_data.items():
+                    if key == "httpGet":
+                        probe_dict["http_get"] = value
+                    elif key == "tcpSocket":
+                        probe_dict["tcp_socket"] = value
+                    elif key == "initialDelaySeconds":
+                        probe_dict["initial_delay_seconds"] = value
+                    elif key == "periodSeconds":
+                        probe_dict["period_seconds"] = value
+                    elif key == "timeoutSeconds":
+                        probe_dict["timeout_seconds"] = value
+                    elif key == "failureThreshold":
+                        probe_dict["failure_threshold"] = value
+                    elif key == "successThreshold":
+                        probe_dict["success_threshold"] = value
+                    else:
+                        probe_dict[key] = value
                 
                 probes.append(ContainerAppProbe(**probe_dict))
 
@@ -167,27 +116,5 @@ def load_app_config_yaml(yaml_path: Path) -> AppConfig:
             )
         )
 
-    # Parse ingress
-    ingress = None
-    if "ingress" in data and data["ingress"]:
-        ingress_data = data["ingress"]
-        if "target_port" not in ingress_data:
-            raise ValueError("Ingress must have 'target_port'")
-        
-        ingress = IngressConfig(
-            external=ingress_data.get("external", True),
-            target_port=int(ingress_data["target_port"]),
-            transport=ingress_data.get("transport", "auto"),
-        )
+    return containers
 
-    # Parse scale settings
-    scale_data = data.get("scale", {})
-    min_replicas = int(scale_data.get("min_replicas", 1))
-    max_replicas = int(scale_data.get("max_replicas", 10))
-
-    return AppConfig(
-        containers=containers,
-        ingress=ingress,
-        min_replicas=min_replicas,
-        max_replicas=max_replicas,
-    )

@@ -62,6 +62,9 @@ azd azaca deploy \
   --container-app my-app \
   --registry-server myregistry.azurecr.io \
   --stage prod \
+  --target-port 8080 \
+  --min-replicas 1 \
+  --max-replicas 10 \
   --keyvault-name my-keyvault \
   --container-config ./container-config.yaml \
   --env-var-secrets SECRET1 SECRET2
@@ -78,18 +81,9 @@ This command:
 
 **Container Configuration YAML:**
 
-The `--container-config` file specifies all container settings including images, resources, environment variables, health probes, ingress, and scaling:
+The `--container-config` file specifies container settings including images, resources, environment variables, and health probes:
 
 ```yaml
-ingress:
-  external: true
-  target_port: 8080
-  transport: auto
-
-scale:
-  min_replicas: 1
-  max_replicas: 10
-
 containers:
   - name: my-app
     image_name: my-image
@@ -124,15 +118,6 @@ containers:
 
 **Configuration Fields:**
 
-- `ingress` (optional): App-level ingress configuration
-  - `external`: Whether ingress is external (default: true)
-  - `target_port`: Target port for ingress (required)
-  - `transport`: Transport protocol (default: "auto")
-
-- `scale` (optional): Scaling configuration
-  - `min_replicas`: Minimum replicas (default: 1)
-  - `max_replicas`: Maximum replicas (default: 10)
-
 - `containers` (required): List of container configurations
   - `name`: Container name (required)
   - `image_name`: Image name without registry/tag (required)
@@ -142,6 +127,8 @@ containers:
   - `dockerfile`: Path to Dockerfile for building (optional)
   - `existing_image_tag`: Tag to retag from instead of building (optional)
   - `probes`: List of health probes (optional)
+
+**Note:** Ingress configuration (target port) and scaling parameters (min/max replicas) are specified via CLI arguments, not in the YAML file.
 
 #### Stage 2: Update Traffic Weights
 
