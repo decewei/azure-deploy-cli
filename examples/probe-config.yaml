@@ -1,16 +1,30 @@
-properties:
-  template:
-    containers:
-    - name: my-app
-      probes:
+ingress:
+  external: true
+  target_port: 8080
+  transport: auto
+
+scale:
+  min_replicas: 1
+  max_replicas: 10
+
+containers:
+  - name: my-app
+    image_name: my-image
+    cpu: 0.5
+    memory: "1.0Gi"
+    env_vars:
+      - ENV_VAR1
+      - ENV_VAR2
+    dockerfile: ./Dockerfile
+    probes:
       - type: Liveness
         httpGet:
           path: /health
           port: 8080
           scheme: HTTP
           httpHeaders:
-          - name: Custom-Header
-            value: ReadinessCheck
+            - name: Custom-Header
+              value: HealthCheck
         initialDelaySeconds: 10
         periodSeconds: 30
         timeoutSeconds: 5
@@ -30,3 +44,12 @@ properties:
         initialDelaySeconds: 0
         periodSeconds: 5
         failureThreshold: 30
+
+  - name: sidecar
+    image_name: sidecar-image
+    cpu: 0.25
+    memory: "0.5Gi"
+    env_vars:
+      - SIDECAR_CONFIG
+    existing_image_tag: v1.0.0
+

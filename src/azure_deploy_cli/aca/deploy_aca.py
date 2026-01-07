@@ -206,87 +206,154 @@ def deploy_revision(
     registry_server: str,
     registry_user: str,
     registry_pass_env_name: str,
-    image_name: str,
-    image_tag: str,
+    revision_suffix: str,
     location: str,
     stage: str,
-    target_port: int,
-    cpu: float,
-    memory: str,
+    container_configs: list,  # list[ContainerConfig] from yaml_loader
+    ingress_config: Any | None,  # IngressConfig from yaml_loader
     min_replicas: int,
     max_replicas: int,
     secret_key_vault_config: SecretKeyVaultConfig,
-    env_var_names: list[str],
-    revision_suffix: str,
-    existing_image_tag: str | None = None,
-    probes: list[ContainerAppProbe] | None = None,
 ) -> RevisionDeploymentResult:
     """
-    Deploy a new revision without updating traffic weights.
+    Deploy a new revision with multiple containers without updating traffic weights.
 
     This function creates a new revision with existing traffic preserved and checks
     if the activation succeeds. Returns revision information for use in subsequent
     traffic management operations.
 
-    The image_tag parameter should be the revision suffix when building images with
-    revision-specific tags for rollback support.
-
     Args:
-        revision_suffix: Optional pre-generated revision suffix. If not provided,
-                        one will be generated.
-        existing_image_tag: If provided, the image with this tag will be pulled,
-                           retagged to image_tag, and pushed. If not provided,
-                           the existing behavior is used (check for image with
-                           image_tag and push or build as needed).
-        probes: Optional list of health probes for the container
+        client: ContainerAppsAPIClient instance
+        subscription_id: Azure subscription ID
+        resource_group: Resource group name
+        container_app_env: Managed environment for the container app
+        user_identity: User-assigned managed identity
+        container_app_name: Name of the container app
+        registry_server: Container registry server URL
+        registry_user: Registry username
+        registry_pass_env_name: Name of the registry password environment variable
+        revision_suffix: Revision suffix for naming
+        location: Azure location
+        stage: Deployment stage label
+        container_configs: List of ContainerConfig objects from YAML
+        ingress_config: Optional IngressConfig from YAML
+        min_replicas: Minimum number of replicas
+        max_replicas: Maximum number of replicas
+        secret_key_vault_config: Key Vault configuration for secrets
 
     Returns:
         RevisionDeploymentResult with revision name and status information
 
     Raises:
-        RuntimeError: If the deployment fails or if existing_image_tag is provided
-                     but the image doesn't exist
+        RuntimeError: If the deployment fails or image operations fail
     """
     logger.info(f"Deploying new revision for Container App '{container_app_name}'...")
+    logger.info(f"Building and deploying {len(container_configs)} container(s)...")
+
+    # Collect all environment variable names from all containers
+    all_env_var_names = []
+    for container_config in container_configs:
+        all_env_var_names.extend(container_config.env_vars)
+    
+    # Remove duplicates while preserving order
+    all_env_var_names = list(dict.fromkeys(all_env_var_names))
 
     secret_key_vault_config.secret_names.append(registry_pass_env_name)
-    secrets, env_vars = _prepare_secrets_and_env_vars(
+    secrets, env_vars_dict = _prepare_secrets_and_env_vars(
         secret_config=secret_key_vault_config,
         subscription_id=subscription_id,
-        env_var_names=env_var_names,
+        env_var_names=all_env_var_names,
         resource_group=resource_group,
     )
 
     validate_revision_suffix_and_throw(revision_suffix, stage)
     revision_name = generate_revision_name(container_app_name, revision_suffix, stage)
-    full_image_name = get_aca_docker_image_name(registry_server, image_name, image_tag)
 
-    # Handle image retagging if existing_image_tag is provided
-    if existing_image_tag:
-        logger.info(f"Retagging existing image with tag '{existing_image_tag}' to '{image_tag}'...")
-        source_full_image_name = get_aca_docker_image_name(
-            registry_server, image_name, existing_image_tag
+    # Build/retag images and create Container objects for each container config
+    containers = []
+    for container_config in container_configs:
+        logger.info(f"Processing container '{container_config.name}'...")
+        
+        # Use revision suffix as image tag
+        image_tag = revision_suffix
+        full_image_name = get_aca_docker_image_name(
+            registry_server, container_config.image_name, image_tag
         )
-        target_full_image_name = get_aca_docker_image_name(registry_server, image_name, image_tag)
 
-        try:
-            docker.pull_retag_and_push_image(source_full_image_name, target_full_image_name)
-        except RuntimeError as e:
-            logger.error(f"Failed to retag image from '{existing_image_tag}' to '{image_tag}': {e}")
-            raise RuntimeError(
-                f"Image with tag '{existing_image_tag}' does not exist or retagging failed. "
-                f"Please ensure the source image exists in the registry."
-            ) from e
+        # Handle image building or retagging
+        if container_config.existing_image_tag:
+            logger.info(
+                f"Retagging existing image '{container_config.image_name}:"
+                f"{container_config.existing_image_tag}' to '{image_tag}'..."
+            )
+            source_full_image_name = get_aca_docker_image_name(
+                registry_server, container_config.image_name, container_config.existing_image_tag
+            )
+            target_full_image_name = full_image_name
 
+            try:
+                docker.pull_retag_and_push_image(source_full_image_name, target_full_image_name)
+            except RuntimeError as e:
+                logger.error(
+                    f"Failed to retag image from '{container_config.existing_image_tag}' "
+                    f"to '{image_tag}': {e}"
+                )
+                raise RuntimeError(
+                    f"Image with tag '{container_config.existing_image_tag}' does not exist "
+                    f"or retagging failed. Please ensure the source image exists in the registry."
+                ) from e
+        elif container_config.dockerfile:
+            # Build the image
+            logger.info(
+                f"Building image '{container_config.image_name}' from "
+                f"Dockerfile '{container_config.dockerfile}'..."
+            )
+            build_acr_image(
+                dockerfile=container_config.dockerfile,
+                full_image_name=full_image_name,
+                registry_server=registry_server,
+            )
+        else:
+            raise ValueError(
+                f"Container '{container_config.name}' must have either 'dockerfile' "
+                f"or 'existing_image_tag' specified"
+            )
+
+        # Filter env vars for this specific container
+        container_env_vars = [
+            env_var for env_var in env_vars_dict if env_var.name in container_config.env_vars
+        ]
+
+        # Create Container object
+        containers.append(
+            Container(
+                image=full_image_name,
+                name=container_config.name,
+                env=container_env_vars,
+                resources=ContainerResources(
+                    cpu=container_config.cpu, memory=container_config.memory
+                ),
+                probes=container_config.probes,
+            )
+        )
+
+    # Get existing traffic weights to preserve them
     existing_app = _get_container_app(client, resource_group, container_app_name)
     existing_traffic_weights = None
     if existing_app and existing_app.configuration and existing_app.configuration.ingress:
         existing_traffic_weights = existing_app.configuration.ingress.traffic
 
-    logger.info(
-        f"Deploying revision '{revision_name}' with image '{full_image_name}'"
-        + " and existing traffic preserved"
-    )
+    # Build ingress configuration
+    ingress = None
+    if ingress_config:
+        ingress = Ingress(
+            external=ingress_config.external,
+            target_port=ingress_config.target_port,
+            transport=ingress_config.transport,
+            traffic=existing_traffic_weights,  # Preserve existing traffic
+        )
+
+    logger.info(f"Deploying revision '{revision_name}' with existing traffic preserved")
     poller = client.container_apps.begin_create_or_update(
         resource_group_name=resource_group,
         container_app_name=container_app_name,
@@ -294,12 +361,7 @@ def deploy_revision(
             location=location,
             environment_id=container_app_env.id,
             configuration=ContainerAppConfiguration(
-                ingress=Ingress(
-                    external=True,
-                    target_port=target_port,
-                    transport="auto",
-                    traffic=existing_traffic_weights,  # Preserve existing traffic
-                ),
+                ingress=ingress,
                 registries=[
                     RegistryCredentials(
                         server=registry_server,
@@ -312,15 +374,7 @@ def deploy_revision(
             ),
             template=Template(
                 revision_suffix=revision_suffix,
-                containers=[
-                    Container(
-                        image=full_image_name,
-                        name=container_app_name,
-                        env=env_vars,
-                        resources=ContainerResources(cpu=cpu, memory=f"{memory}Gi"),
-                        probes=probes,
-                    )
-                ],
+                containers=containers,
                 scale=Scale(min_replicas=min_replicas, max_replicas=max_replicas),
             ),
             identity=ManagedServiceIdentity(

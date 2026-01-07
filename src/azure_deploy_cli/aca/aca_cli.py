@@ -12,15 +12,13 @@ from ..identity.role import assign_role_by_files
 from ..utils.azure_cli import get_credential, get_subscription_and_tenant
 from ..utils.key_vault import get_key_vault_client
 from ..utils.logging import get_logger
-from ..utils.yaml_loader import extract_probes_from_config, load_container_app_yaml
+from ..utils.yaml_loader import load_app_config_yaml
 from .deploy_aca import (
     SecretKeyVaultConfig,
     bind_aca_managed_certificate,
-    build_acr_image,
     create_container_app_env,
     deploy_revision,
     generate_revision_suffix,
-    get_aca_docker_image_name,
     update_traffic_weights,
     validate_revision_suffix_and_throw,
 )
@@ -89,20 +87,24 @@ def _validate_cli_deploy(args: Any):
         raise ValueError("Role config provided without env vars files")
     elif args.role_env_vars_files:
         raise ValueError("Role env vars files provided without role config")
+    
+    # Container config is now required
+    if not args.container_config:
+        raise ValueError("Container configuration file (--container-config) is required")
 
 
 def cli_deploy(args: Any) -> None:
     """
-    Note: this is an opinionated deployment flow for ACA.
-    Deploy Azure Container App revision without updating traffic.
+    Deploy Azure Container App revision from YAML configuration without updating traffic.
 
     This command orchestrates:
-    1. Create/get user-assigned managed identity (if specified)
-    2. Assign roles to the identity (if role config provided)
-    3. Build and push container image (if not skipped)
-    4. Deploy new revision with 0% traffic
-    5. Verify revision activation and health
-    6. Output the revision name for use in traffic management
+    1. Load container configuration from YAML
+    2. Create/get user-assigned managed identity (if specified)
+    3. Assign roles to the identity (if role config provided)
+    4. Build/push container images for all containers
+    5. Deploy new revision with 0% traffic
+    6. Verify revision activation and health
+    7. Output the revision name for use in traffic management
 
     Args:
         args: Parsed command line arguments
@@ -129,23 +131,11 @@ def cli_deploy(args: Any) -> None:
             else generate_revision_suffix(stage=args.stage)
         )
 
-        logger.critical("Building and pushing ACR image...")
-        logger.info(f"Using revision suffix '{revision_suffix}' as target image tag")
-        build_acr_image(
-            registry_server=args.registry_server,
-            dockerfile=args.dockerfile,
-            full_image_name=get_aca_docker_image_name(
-                registry_server=args.registry_server,
-                image_name=args.image_name,
-                image_tag=revision_suffix,
-            ),
-            source_full_image_name=get_aca_docker_image_name(
-                registry_server=args.registry_server,
-                image_name=args.image_name,
-                image_tag=args.existing_image_tag,
-            )
-            if args.existing_image_tag
-            else None,
+        # Load container configuration from YAML
+        logger.critical(f"Loading container configuration from '{args.container_config}'...")
+        app_config = load_app_config_yaml(args.container_config)
+        logger.critical(
+            f"Loaded configuration with {len(app_config.containers)} container(s)"
         )
 
         logger.critical("Setting up managed identity and roles...")
@@ -170,15 +160,6 @@ def cli_deploy(args: Any) -> None:
         if not env:
             raise ValueError("Cannot create container app env")
 
-        # Load probes from config if provided
-        probes = None
-        probe_config_path = getattr(args, "probe_config", None)
-        if probe_config_path:
-            logger.critical(f"Loading probe configuration from '{probe_config_path}'...")
-            config = load_container_app_yaml(probe_config_path)
-            probes = extract_probes_from_config(config, args.container_app)
-            logger.critical(f"Loaded {len(probes) if probes else 0} probe(s) from configuration")
-
         logger.critical("Deploying new revision...")
         result = deploy_revision(
             client=container_apps_api_client,
@@ -190,25 +171,19 @@ def cli_deploy(args: Any) -> None:
             registry_server=args.registry_server,
             registry_user=registry_user,
             registry_pass_env_name=REGISTRY_PASS_SECRET_ENV_NAME,
-            image_name=args.image_name,
-            image_tag=revision_suffix,
             revision_suffix=revision_suffix,
             location=args.location,
             stage=args.stage,
-            target_port=args.target_port,
-            cpu=args.cpu,
-            memory=args.memory,
-            min_replicas=args.min_replicas,
-            max_replicas=args.max_replicas,
+            container_configs=app_config.containers,
+            ingress_config=app_config.ingress,
+            min_replicas=app_config.min_replicas,
+            max_replicas=app_config.max_replicas,
             secret_key_vault_config=SecretKeyVaultConfig(
                 key_vault_client=key_vault_client,
                 key_vault_name=args.keyvault_name,
                 secret_names=args.env_var_secrets or [],
                 user_identity=user_identity,
             ),
-            env_var_names=args.env_vars,
-            existing_image_tag=args.existing_image_tag,
-            probes=probes,
         )
 
         if args.custom_domains:
@@ -363,53 +338,6 @@ def add_commands(subparsers: argparse._SubParsersAction) -> None:
         help="Container registry server.",
     )
     deploy_parser.add_argument(
-        "--image-name",
-        required=True,
-        type=str,
-        help="Name of the container image.",
-    )
-    deploy_parser.add_argument(
-        "--existing-image-tag",
-        required=False,
-        type=str,
-        help=(
-            "Tag of an existing image to retag to the revision suffix. "
-            "If provided, the image with this tag will be pulled from the registry, "
-            "retagged to the revision suffix, and pushed. "
-            "If the image doesn't exist, deployment will fail."
-        ),
-    )
-    deploy_parser.add_argument(
-        "--target-port",
-        required=True,
-        type=int,
-        help="Target port for the container app.",
-    )
-    deploy_parser.add_argument(
-        "--cpu",
-        required=True,
-        type=float,
-        help="CPU allocation for the container app.",
-    )
-    deploy_parser.add_argument(
-        "--memory",
-        required=True,
-        type=str,
-        help="Memory allocation for the container app (e.g., '2.0Gi').",
-    )
-    deploy_parser.add_argument(
-        "--min-replicas",
-        required=True,
-        type=int,
-        help="Minimum number of replicas for the container app.",
-    )
-    deploy_parser.add_argument(
-        "--max-replicas",
-        required=True,
-        type=int,
-        help="Maximum number of replicas for the container app.",
-    )
-    deploy_parser.add_argument(
         "--keyvault-name",
         required=True,
         type=str,
@@ -428,14 +356,6 @@ def add_commands(subparsers: argparse._SubParsersAction) -> None:
         type=str,
         nargs="+",
         help="Space-separated names of environment variables to be stored as secrets in Key Vault.",
-    )
-
-    deploy_parser.add_argument(
-        "--env-vars",
-        required=False,
-        type=str,
-        nargs="+",
-        help="Space-separated names of environment variables to pass to the container.",
     )
 
     deploy_parser.add_argument(
@@ -469,18 +389,11 @@ def add_commands(subparsers: argparse._SubParsersAction) -> None:
     )
 
     deploy_parser.add_argument(
-        "--dockerfile",
+        "--container-config",
         required=True,
-        type=str,
-        help="Path to the Dockerfile for building the container image.",
-    )
-
-    deploy_parser.add_argument(
-        "--probe-config",
-        required=False,
         type=Path,
-        help="Path to YAML file containing Azure Container Apps configuration "
-        "(follows Azure Resource Manager template format)",
+        help="Path to YAML file containing container configurations "
+        "(includes image names, cpu, memory, env_vars, probes, ingress, and scale settings)",
     )
 
     deploy_parser.set_defaults(func=cli_deploy)
