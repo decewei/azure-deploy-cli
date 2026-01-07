@@ -118,7 +118,7 @@ containers:
             temp_path = Path(f.name)
 
         try:
-            with pytest.raises(ValueError, match="must have 'image_name'"):
+            with pytest.raises(ValueError, match="Invalid YAML configuration"):
                 load_app_config_yaml(temp_path)
         finally:
             temp_path.unlink()
@@ -133,7 +133,7 @@ empty: true
             temp_path = Path(f.name)
 
         try:
-            with pytest.raises(ValueError, match="must contain 'containers' list"):
+            with pytest.raises(ValueError, match="Invalid YAML configuration"):
                 load_app_config_yaml(temp_path)
         finally:
             temp_path.unlink()

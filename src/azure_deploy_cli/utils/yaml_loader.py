@@ -1,28 +1,44 @@
-from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
 import yaml
 from azure.mgmt.appcontainers.models import ContainerAppProbe
+from pydantic import BaseModel, Field, field_validator, model_validator
 
 
-@dataclass
-class ContainerConfig:
+class ContainerConfig(BaseModel):
     """Configuration for a single container from YAML."""
 
     name: str
-    image_name: str  # Just the image name, no registry or tag
+    image_name: str = Field(..., description="Just the image name, no registry or tag")
     cpu: float
     memory: str
-    env_vars: list[str]  # List of environment variable names to load
-    probes: list[ContainerAppProbe] | None = None
-    existing_image_tag: str | None = None  # Optional tag to retag from
-    dockerfile: str | None = None  # Optional dockerfile path
+    env_vars: list[str] = Field(default_factory=list, description="List of environment variable names to load")
+    probes: list[ContainerAppProbe] | None = Field(default=None, description="List of probe configurations")
+    existing_image_tag: str | None = Field(default=None, description="Optional tag to retag from")
+    dockerfile: str | None = Field(default=None, description="Optional dockerfile path")
+    
+    @field_validator('probes', mode='before')
+    @classmethod
+    def parse_probes(cls, v: list[dict[str, Any]] | None) -> list[ContainerAppProbe] | None:
+        """Parse probe dictionaries to ContainerAppProbe objects."""
+        if v is None:
+            return None
+        return [ContainerAppProbe(**probe_data) for probe_data in v]
+    
+    class Config:
+        arbitrary_types_allowed = True
+
+
+class AppConfig(BaseModel):
+    """Root configuration model for the YAML file."""
+    
+    containers: list[ContainerConfig] = Field(..., min_length=1, description="List of container configurations")
 
 
 def load_app_config_yaml(yaml_path: Path) -> list[ContainerConfig]:
     """
-    Load container configurations from YAML file.
+    Load container configurations from YAML file using Pydantic for validation.
 
     The YAML should have the following structure:
     ```yaml
@@ -52,7 +68,7 @@ def load_app_config_yaml(yaml_path: Path) -> list[ContainerConfig]:
         List of ContainerConfig instances
 
     Raises:
-        ValueError: If YAML structure is invalid
+        ValueError: If YAML structure is invalid or validation fails
     """
     with open(yaml_path) as f:
         data: dict[str, Any] = yaml.safe_load(f)
@@ -60,40 +76,10 @@ def load_app_config_yaml(yaml_path: Path) -> list[ContainerConfig]:
     if not data:
         raise ValueError("YAML file is empty")
 
-    # Parse containers
-    if "containers" not in data or not data["containers"]:
-        raise ValueError("YAML must contain 'containers' list")
-
-    containers = []
-    for container_data in data["containers"]:
-        if "name" not in container_data:
-            raise ValueError("Each container must have a 'name'")
-        if "image_name" not in container_data:
-            raise ValueError(f"Container '{container_data['name']}' must have 'image_name'")
-        if "cpu" not in container_data:
-            raise ValueError(f"Container '{container_data['name']}' must have 'cpu'")
-        if "memory" not in container_data:
-            raise ValueError(f"Container '{container_data['name']}' must have 'memory'")
-
-        # Parse probes if present - expect snake_case keys matching SDK
-        probes = None
-        if "probes" in container_data and container_data["probes"]:
-            from azure.mgmt.appcontainers.models import ContainerAppProbe
-            
-            probes = [ContainerAppProbe(**probe_data) for probe_data in container_data["probes"]]
-
-        containers.append(
-            ContainerConfig(
-                name=container_data["name"],
-                image_name=container_data["image_name"],
-                cpu=float(container_data["cpu"]),
-                memory=str(container_data["memory"]),
-                env_vars=container_data.get("env_vars", []),
-                probes=probes,
-                existing_image_tag=container_data.get("existing_image_tag"),
-                dockerfile=container_data.get("dockerfile"),
-            )
-        )
-
-    return containers
+    try:
+        # Use Pydantic to validate and parse the configuration
+        app_config = AppConfig(**data)
+        return app_config.containers
+    except Exception as e:
+        raise ValueError(f"Invalid YAML configuration: {e}") from e
 
