@@ -36,11 +36,13 @@ def load_app_config_yaml(yaml_path: Path) -> list[ContainerConfig]:
           - ENV_VAR2
         dockerfile: ./Dockerfile  # optional
         existing_image_tag: v1.0  # optional
-        probes:  # optional
+        probes:  # optional - use snake_case keys
           - type: Liveness
-            httpGet:
+            http_get:
               path: /health
               port: 8080
+            initial_delay_seconds: 10
+            period_seconds: 30
     ```
 
     Args:
@@ -73,29 +75,12 @@ def load_app_config_yaml(yaml_path: Path) -> list[ContainerConfig]:
         if "memory" not in container_data:
             raise ValueError(f"Container '{container_data['name']}' must have 'memory'")
 
-        # Parse probes if present - convert camelCase to snake_case for SDK
+        # Parse probes if present - expect snake_case keys matching SDK
         probes = None
         if "probes" in container_data and container_data["probes"]:
             from azure.mgmt.appcontainers.models import ContainerAppProbe
             
-            probes = []
-            for probe_data in container_data["probes"]:
-                # Convert camelCase keys to snake_case
-                probe_dict = {}
-                for key, value in probe_data.items():
-                    # Map camelCase to snake_case
-                    key_map = {
-                        "httpGet": "http_get",
-                        "tcpSocket": "tcp_socket",
-                        "initialDelaySeconds": "initial_delay_seconds",
-                        "periodSeconds": "period_seconds",
-                        "timeoutSeconds": "timeout_seconds",
-                        "failureThreshold": "failure_threshold",
-                        "successThreshold": "success_threshold",
-                    }
-                    probe_dict[key_map.get(key, key)] = value
-                
-                probes.append(ContainerAppProbe(**probe_dict))
+            probes = [ContainerAppProbe(**probe_data) for probe_data in container_data["probes"]]
 
         containers.append(
             ContainerConfig(

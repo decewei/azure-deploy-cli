@@ -50,11 +50,11 @@ containers:
     dockerfile: ./Dockerfile
     probes:
       - type: Liveness
-        httpGet:
+        http_get:
           path: /health
           port: 8080
-        initialDelaySeconds: 10
-        periodSeconds: 30
+        initial_delay_seconds: 10
+        period_seconds: 30
 """
         with tempfile.NamedTemporaryFile(mode="w", suffix=".yaml", delete=False) as f:
             f.write(yaml_content)

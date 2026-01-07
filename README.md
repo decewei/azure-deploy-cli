@@ -95,17 +95,17 @@ containers:
     dockerfile: ./Dockerfile
     probes:
       - type: Liveness
-        httpGet:
+        http_get:
           path: /health
           port: 8080
-        initialDelaySeconds: 10
-        periodSeconds: 30
+        initial_delay_seconds: 10
+        period_seconds: 30
       - type: Readiness
-        httpGet:
+        http_get:
           path: /ready
           port: 8080
-        initialDelaySeconds: 5
-        periodSeconds: 10
+        initial_delay_seconds: 5
+        period_seconds: 10
 
   - name: sidecar
     image_name: sidecar-image
