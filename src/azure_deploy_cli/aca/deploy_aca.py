@@ -4,7 +4,6 @@ import subprocess
 import time
 from collections import defaultdict
 from pathlib import Path
-from pathlib import Path as PathType
 
 from azure.core.exceptions import (
     ClientAuthenticationError,
@@ -38,7 +37,6 @@ from azure.mgmt.keyvault.models import SecretCreateOrUpdateParameters, SecretPro
 from ..identity.models import ManagedIdentity
 from ..utils import docker
 from ..utils.logging import get_logger
-from ..utils.yaml_loader import load_container_app_yaml
 from .model import RevisionDeploymentResult, SecretKeyVaultConfig
 
 logger = get_logger(__name__)
@@ -198,38 +196,6 @@ def create_container_app_env(
         return None
 
 
-def _extract_probes_from_config(
-    config: ContainerApp, container_name: str
-) -> list[ContainerAppProbe] | None:
-    """
-    Extract probes for a specific container from Container App config.
-
-    Args:
-        config: ContainerApp configuration loaded from YAML
-        container_name: Name of the container to extract probes for
-
-    Returns:
-        List of probes if found, None otherwise
-    """
-    if not config.template:
-        return None
-
-    template = config.template
-    if not template.containers:
-        return None
-
-    # Find the matching container
-    for container in template.containers:
-        if container.name == container_name:
-            return container.probes
-
-    # If no match, return probes from first container
-    if template.containers:
-        return template.containers[0].probes
-
-    return None
-
-
 def deploy_revision(
     client: ContainerAppsAPIClient,
     subscription_id: str,
@@ -253,7 +219,7 @@ def deploy_revision(
     env_var_names: list[str],
     revision_suffix: str,
     existing_image_tag: str | None = None,
-    probe_config_path: PathType | None = None,
+    probes: list[ContainerAppProbe] | None = None,
 ) -> RevisionDeploymentResult:
     """
     Deploy a new revision without updating traffic weights.
@@ -272,8 +238,7 @@ def deploy_revision(
                            retagged to image_tag, and pushed. If not provided,
                            the existing behavior is used (check for image with
                            image_tag and push or build as needed).
-        probe_config_path: Optional path to YAML file with Azure Container Apps
-                          probe configuration (follows Azure ARM template format)
+        probes: Optional list of health probes for the container
 
     Returns:
         RevisionDeploymentResult with revision name and status information
@@ -283,17 +248,6 @@ def deploy_revision(
                      but the image doesn't exist
     """
     logger.info(f"Deploying new revision for Container App '{container_app_name}'...")
-
-    # Load probes from config if provided
-    probes = None
-    if probe_config_path:
-        logger.info(f"Loading configuration from '{probe_config_path}'...")
-        config = load_container_app_yaml(probe_config_path)
-        probes = _extract_probes_from_config(config, container_app_name)
-        if probes:
-            logger.info(f"Loaded {len(probes)} probe(s) from configuration")
-        else:
-            logger.warning("No probes found in configuration file")
 
     secret_key_vault_config.secret_names.append(registry_pass_env_name)
     secrets, env_vars = _prepare_secrets_and_env_vars(

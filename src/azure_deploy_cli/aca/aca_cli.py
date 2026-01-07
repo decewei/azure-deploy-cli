@@ -12,6 +12,7 @@ from ..identity.role import assign_role_by_files
 from ..utils.azure_cli import get_credential, get_subscription_and_tenant
 from ..utils.key_vault import get_key_vault_client
 from ..utils.logging import get_logger
+from ..utils.yaml_loader import extract_probes_from_config, load_container_app_yaml
 from .deploy_aca import (
     SecretKeyVaultConfig,
     bind_aca_managed_certificate,
@@ -169,6 +170,15 @@ def cli_deploy(args: Any) -> None:
         if not env:
             raise ValueError("Cannot create container app env")
 
+        # Load probes from config if provided
+        probes = None
+        probe_config_path = getattr(args, "probe_config", None)
+        if probe_config_path:
+            logger.critical(f"Loading probe configuration from '{probe_config_path}'...")
+            config = load_container_app_yaml(probe_config_path)
+            probes = extract_probes_from_config(config, args.container_app)
+            logger.critical(f"Loaded {len(probes) if probes else 0} probe(s) from configuration")
+
         logger.critical("Deploying new revision...")
         result = deploy_revision(
             client=container_apps_api_client,
@@ -198,7 +208,7 @@ def cli_deploy(args: Any) -> None:
             ),
             env_var_names=args.env_vars,
             existing_image_tag=args.existing_image_tag,
-            probe_config_path=getattr(args, "probe_config", None),
+            probes=probes,
         )
 
         if args.custom_domains:

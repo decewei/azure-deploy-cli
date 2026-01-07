@@ -2,8 +2,9 @@ import tempfile
 from pathlib import Path
 from unittest.mock import Mock
 
-from azure_deploy_cli.aca.deploy_aca import _extract_probes_from_config
-from azure_deploy_cli.utils.yaml_loader import load_container_app_yaml
+import pytest
+
+from azure_deploy_cli.utils.yaml_loader import extract_probes_from_config, load_container_app_yaml
 
 
 class TestYamlLoader:
@@ -82,14 +83,14 @@ class TestExtractProbesFromConfig:
         mock_config = Mock()
         mock_config.template = mock_template
 
-        probes = _extract_probes_from_config(mock_config, "my-app")
+        probes = extract_probes_from_config(mock_config, "my-app")
         assert probes is not None
         assert len(probes) == 2
         assert probes[0].type == "Liveness"
         assert probes[1].type == "Readiness"
 
-    def test_extract_probes_no_match_returns_first_container(self):
-        """Test extracting probes when container name doesn't match - returns first container."""
+    def test_extract_probes_no_match_raises_error(self):
+        """Test extracting probes when container name doesn't match - raises error."""
         mock_probe = Mock()
         mock_probe.type = "Startup"
 
@@ -103,18 +104,16 @@ class TestExtractProbesFromConfig:
         mock_config = Mock()
         mock_config.template = mock_template
 
-        probes = _extract_probes_from_config(mock_config, "my-app")
-        assert probes is not None
-        assert len(probes) == 1
-        assert probes[0].type == "Startup"
+        with pytest.raises(ValueError, match="Container 'my-app' not found in configuration"):
+            extract_probes_from_config(mock_config, "my-app")
 
     def test_extract_probes_no_template(self):
         """Test extracting probes when config has no template."""
         mock_config = Mock()
         mock_config.template = None
 
-        probes = _extract_probes_from_config(mock_config, "my-app")
-        assert probes is None
+        with pytest.raises(ValueError, match="Container App configuration has no template"):
+            extract_probes_from_config(mock_config, "my-app")
 
     def test_extract_probes_no_containers(self):
         """Test extracting probes when template has no containers."""
@@ -124,8 +123,9 @@ class TestExtractProbesFromConfig:
         mock_config = Mock()
         mock_config.template = mock_template
 
-        probes = _extract_probes_from_config(mock_config, "my-app")
-        assert probes is None
+        with pytest.raises(ValueError, match="Container App template has no containers"):
+            extract_probes_from_config(mock_config, "my-app")
+
 
     def test_extract_probes_empty_containers_list(self):
         """Test extracting probes when containers list is empty."""
@@ -135,8 +135,8 @@ class TestExtractProbesFromConfig:
         mock_config = Mock()
         mock_config.template = mock_template
 
-        probes = _extract_probes_from_config(mock_config, "my-app")
-        assert probes is None
+        with pytest.raises(ValueError, match="Container App template has no containers"):
+            extract_probes_from_config(mock_config, "my-app")
 
     def test_extract_probes_container_has_none_probes(self):
         """Test extracting probes when container has None for probes."""
@@ -150,5 +150,6 @@ class TestExtractProbesFromConfig:
         mock_config = Mock()
         mock_config.template = mock_template
 
-        probes = _extract_probes_from_config(mock_config, "my-app")
+        probes = extract_probes_from_config(mock_config, "my-app")
         assert probes is None
+
