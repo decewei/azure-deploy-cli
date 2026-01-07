@@ -197,109 +197,96 @@ def create_container_app_env(
         return None
 
 
-def _build_or_retag_container_image(
-    container_config: Any,  # ContainerConfig
+def _build_images_and_create_containers(
+    container_configs: list,  # list[ContainerConfig]
     registry_server: str,
     revision_suffix: str,
-) -> str:
+    env_vars_dict: list,  # list of env vars from Key Vault
+) -> list:  # list[Container]
     """
-    Build or retag a container image based on configuration.
+    Build/retag images for all containers and create Container objects.
 
     Args:
-        container_config: ContainerConfig with image settings
+        container_configs: List of ContainerConfig objects from YAML
         registry_server: Container registry server URL
         revision_suffix: Revision suffix to use as image tag
+        env_vars_dict: List of environment variables from Key Vault
 
     Returns:
-        Full image name with registry and tag
+        List of Container objects ready for deployment
 
     Raises:
         RuntimeError: If image building or retagging fails
         ValueError: If neither dockerfile nor existing_image_tag is specified
     """
-    image_tag = revision_suffix
-    full_image_name = get_aca_docker_image_name(
-        registry_server, container_config.image_name, image_tag
-    )
-
-    if container_config.existing_image_tag:
-        _retag_container_image(
-            container_config.image_name,
-            container_config.existing_image_tag,
-            image_tag,
-            registry_server,
-        )
-    elif container_config.dockerfile:
-        _build_container_image(
-            container_config.dockerfile,
-            full_image_name,
-            registry_server,
-        )
-    else:
-        raise ValueError(
-            f"Container '{container_config.name}' must have either 'dockerfile' "
-            f"or 'existing_image_tag' specified"
+    containers = []
+    
+    for container_config in container_configs:
+        logger.info(f"Processing container '{container_config.name}'...")
+        
+        # Build full image name with revision suffix as tag
+        image_tag = revision_suffix
+        full_image_name = get_aca_docker_image_name(
+            registry_server, container_config.image_name, image_tag
         )
 
-    return full_image_name
+        # Handle image building or retagging
+        if container_config.existing_image_tag:
+            logger.info(
+                f"Retagging existing image '{container_config.image_name}:"
+                f"{container_config.existing_image_tag}' to '{image_tag}'..."
+            )
+            source_full_image_name = get_aca_docker_image_name(
+                registry_server, container_config.image_name, container_config.existing_image_tag
+            )
+            try:
+                docker.pull_retag_and_push_image(source_full_image_name, full_image_name)
+                logger.success(f"Image retagged successfully to '{image_tag}'")
+            except RuntimeError as e:
+                logger.error(
+                    f"Failed to retag image from '{container_config.existing_image_tag}' "
+                    f"to '{image_tag}': {e}"
+                )
+                raise RuntimeError(
+                    f"Image with tag '{container_config.existing_image_tag}' does not exist "
+                    f"or retagging failed. Please ensure the source image exists in the registry."
+                ) from e
+        elif container_config.dockerfile:
+            logger.info(
+                f"Building image '{container_config.image_name}' from "
+                f"Dockerfile '{container_config.dockerfile}'..."
+            )
+            build_acr_image(
+                dockerfile=container_config.dockerfile,
+                full_image_name=full_image_name,
+                registry_server=registry_server,
+            )
+            logger.success("Image built successfully")
+        else:
+            raise ValueError(
+                f"Container '{container_config.name}' must have either 'dockerfile' "
+                f"or 'existing_image_tag' specified"
+            )
 
+        # Filter env vars for this specific container
+        container_env_vars = [
+            env_var for env_var in env_vars_dict if env_var.name in container_config.env_vars
+        ]
 
-def _retag_container_image(
-    image_name: str,
-    source_tag: str,
-    target_tag: str,
-    registry_server: str,
-) -> None:
-    """
-    Retag an existing image to a new tag.
-
-    Args:
-        image_name: Base image name
-        source_tag: Existing tag to retag from
-        target_tag: New tag to apply
-        registry_server: Container registry server URL
-
-    Raises:
-        RuntimeError: If retagging fails
-    """
-    logger.info(f"Retagging existing image '{image_name}:{source_tag}' to '{target_tag}'...")
-    source_full_image_name = get_aca_docker_image_name(registry_server, image_name, source_tag)
-    target_full_image_name = get_aca_docker_image_name(registry_server, image_name, target_tag)
-
-    try:
-        docker.pull_retag_and_push_image(source_full_image_name, target_full_image_name)
-        logger.success(f"Image retagged successfully to '{target_tag}'")
-    except RuntimeError as e:
-        logger.error(f"Failed to retag image from '{source_tag}' to '{target_tag}': {e}")
-        raise RuntimeError(
-            f"Image with tag '{source_tag}' does not exist or retagging failed. "
-            f"Please ensure the source image exists in the registry."
-        ) from e
-
-
-def _build_container_image(
-    dockerfile: str,
-    full_image_name: str,
-    registry_server: str,
-) -> None:
-    """
-    Build a container image from Dockerfile.
-
-    Args:
-        dockerfile: Path to Dockerfile
-        full_image_name: Full image name with registry and tag
-        registry_server: Container registry server URL
-
-    Raises:
-        RuntimeError: If image building fails
-    """
-    logger.info(f"Building image from Dockerfile '{dockerfile}'...")
-    build_acr_image(
-        dockerfile=dockerfile,
-        full_image_name=full_image_name,
-        registry_server=registry_server,
-    )
-    logger.success("Image built successfully")
+        # Create Container object
+        containers.append(
+            Container(
+                image=full_image_name,
+                name=container_config.name,
+                env=container_env_vars,
+                resources=ContainerResources(
+                    cpu=container_config.cpu, memory=container_config.memory
+                ),
+                probes=container_config.probes,
+            )
+        )
+    
+    return containers
 
 
 def deploy_revision(
@@ -317,6 +304,8 @@ def deploy_revision(
     stage: str,
     container_configs: list,  # list[ContainerConfig] from yaml_loader
     target_port: int,
+    ingress_external: bool,
+    ingress_transport: str,
     min_replicas: int,
     max_replicas: int,
     secret_key_vault_config: SecretKeyVaultConfig,
@@ -343,6 +332,8 @@ def deploy_revision(
         stage: Deployment stage label
         container_configs: List of ContainerConfig objects from YAML
         target_port: Target port for ingress
+        ingress_external: Whether ingress is external
+        ingress_transport: Ingress transport protocol
         min_replicas: Minimum number of replicas
         max_replicas: Maximum number of replicas
         secret_key_vault_config: Key Vault configuration for secrets
@@ -375,33 +366,10 @@ def deploy_revision(
     validate_revision_suffix_and_throw(revision_suffix, stage)
     revision_name = generate_revision_name(container_app_name, revision_suffix, stage)
 
-    # Build/retag images and create Container objects for each container config
-    containers = []
-    for container_config in container_configs:
-        logger.info(f"Processing container '{container_config.name}'...")
-        
-        # Build or retag image using helper function
-        full_image_name = _build_or_retag_container_image(
-            container_config, registry_server, revision_suffix
-        )
-
-        # Filter env vars for this specific container
-        container_env_vars = [
-            env_var for env_var in env_vars_dict if env_var.name in container_config.env_vars
-        ]
-
-        # Create Container object
-        containers.append(
-            Container(
-                image=full_image_name,
-                name=container_config.name,
-                env=container_env_vars,
-                resources=ContainerResources(
-                    cpu=container_config.cpu, memory=container_config.memory
-                ),
-                probes=container_config.probes,
-            )
-        )
+    # Build/retag images and create Container objects
+    containers = _build_images_and_create_containers(
+        container_configs, registry_server, revision_suffix, env_vars_dict
+    )
 
     # Get existing traffic weights to preserve them
     existing_app = _get_container_app(client, resource_group, container_app_name)
@@ -411,9 +379,9 @@ def deploy_revision(
 
     # Build ingress configuration from CLI parameters
     ingress = Ingress(
-        external=True,
+        external=ingress_external,
         target_port=target_port,
-        transport="auto",
+        transport=ingress_transport,
         traffic=existing_traffic_weights,  # Preserve existing traffic
     )
 

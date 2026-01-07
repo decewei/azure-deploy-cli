@@ -124,8 +124,8 @@ containers:
   - `cpu`: CPU allocation (required, e.g., 0.5)
   - `memory`: Memory allocation (required, e.g., "1.0Gi")
   - `env_vars`: List of environment variable names to load (optional)
-  - `dockerfile`: Path to Dockerfile for building (optional)
-  - `existing_image_tag`: Tag to retag from instead of building (optional)
+  - `dockerfile`: Path to Dockerfile for building (required if existing_image_tag not provided)
+  - `existing_image_tag`: Tag to retag from instead of building (required if dockerfile not provided)
   - `probes`: List of health probes (optional)
 
 **Note:** Ingress configuration (target port) and scaling parameters (min/max replicas) are specified via CLI arguments, not in the YAML file.

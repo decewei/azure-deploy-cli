@@ -73,33 +73,27 @@ def load_app_config_yaml(yaml_path: Path) -> list[ContainerConfig]:
         if "memory" not in container_data:
             raise ValueError(f"Container '{container_data['name']}' must have 'memory'")
 
-        # Parse probes if present
+        # Parse probes if present - convert camelCase to snake_case for SDK
         probes = None
         if "probes" in container_data and container_data["probes"]:
             from azure.mgmt.appcontainers.models import ContainerAppProbe
-
-            # Try to load probes directly using SDK models
+            
             probes = []
             for probe_data in container_data["probes"]:
-                # Convert camelCase keys to snake_case for SDK compatibility
+                # Convert camelCase keys to snake_case
                 probe_dict = {}
                 for key, value in probe_data.items():
-                    if key == "httpGet":
-                        probe_dict["http_get"] = value
-                    elif key == "tcpSocket":
-                        probe_dict["tcp_socket"] = value
-                    elif key == "initialDelaySeconds":
-                        probe_dict["initial_delay_seconds"] = value
-                    elif key == "periodSeconds":
-                        probe_dict["period_seconds"] = value
-                    elif key == "timeoutSeconds":
-                        probe_dict["timeout_seconds"] = value
-                    elif key == "failureThreshold":
-                        probe_dict["failure_threshold"] = value
-                    elif key == "successThreshold":
-                        probe_dict["success_threshold"] = value
-                    else:
-                        probe_dict[key] = value
+                    # Map camelCase to snake_case
+                    key_map = {
+                        "httpGet": "http_get",
+                        "tcpSocket": "tcp_socket",
+                        "initialDelaySeconds": "initial_delay_seconds",
+                        "periodSeconds": "period_seconds",
+                        "timeoutSeconds": "timeout_seconds",
+                        "failureThreshold": "failure_threshold",
+                        "successThreshold": "success_threshold",
+                    }
+                    probe_dict[key_map.get(key, key)] = value
                 
                 probes.append(ContainerAppProbe(**probe_dict))
 

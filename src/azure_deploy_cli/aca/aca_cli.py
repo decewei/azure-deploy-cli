@@ -172,6 +172,8 @@ def cli_deploy(args: Any) -> None:
             stage=args.stage,
             container_configs=container_configs,
             target_port=args.target_port,
+            ingress_external=getattr(args, 'ingress_external', True),
+            ingress_transport=getattr(args, 'ingress_transport', 'auto'),
             min_replicas=args.min_replicas,
             max_replicas=args.max_replicas,
             secret_key_vault_config=SecretKeyVaultConfig(
@@ -352,6 +354,23 @@ def add_commands(subparsers: argparse._SubParsersAction) -> None:
         required=True,
         type=int,
         help="Target port for the container app ingress.",
+    )
+    
+    deploy_parser.add_argument(
+        "--ingress-external",
+        required=False,
+        type=bool,
+        default=True,
+        help="Whether ingress is external (default: True).",
+    )
+    
+    deploy_parser.add_argument(
+        "--ingress-transport",
+        required=False,
+        type=str,
+        default="auto",
+        choices=["auto", "http", "http2", "tcp"],
+        help="Ingress transport protocol (default: auto).",
     )
     
     deploy_parser.add_argument(
