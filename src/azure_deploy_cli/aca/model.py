@@ -54,6 +54,13 @@ class ContainerConfig(BaseModel):
     existing_image_tag: str | None = Field(default=None, description="Optional tag to retag from")
     dockerfile: str | None = Field(default=None, description="Optional dockerfile path")
 
+    def post_init(self):
+        if not (self.dockerfile or self.existing_image_tag):
+            raise ValueError(
+                f"Container '{self.name}' must have either 'dockerfile' "
+                f"or 'existing_image_tag' specified"
+            )
+
     @field_validator("probes", mode="before")
     @classmethod
     def parse_probes(cls, v: list[dict[str, Any]] | None) -> list[ContainerAppProbe] | None:

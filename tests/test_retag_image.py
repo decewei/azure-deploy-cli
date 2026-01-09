@@ -12,39 +12,57 @@ from azure_deploy_cli.utils.docker import pull_image, pull_retag_and_push_image,
 class TestRetagImage:
     """Tests for image retagging functionality."""
 
-    @patch("azure_deploy_cli.utils.docker.subprocess.run")
-    def test_pull_image_success(self, mock_run):
+    @patch("azure_deploy_cli.utils.docker.subprocess.Popen")
+    def test_pull_image_success(self, mock_popen):
         """Test successful image pull."""
-        mock_run.return_value = Mock(returncode=0)
+        mock_process = Mock()
+        mock_process.stdout.readline = Mock(side_effect=[""])  # EOF immediately
+        mock_process.wait.return_value = 0
+        mock_popen.return_value = mock_process
+
         pull_image("registry.io/myapp:tag1")
-        mock_run.assert_called_once_with(
+        mock_popen.assert_called_once_with(
             ["docker", "pull", "registry.io/myapp:tag1"],
-            capture_output=True,
+            stdout=-1,
+            stderr=-2,
             text=True,
         )
 
-    @patch("azure_deploy_cli.utils.docker.subprocess.run")
-    def test_pull_image_failure(self, mock_run):
+    @patch("azure_deploy_cli.utils.docker.subprocess.Popen")
+    def test_pull_image_failure(self, mock_popen):
         """Test image pull failure."""
-        mock_run.return_value = Mock(returncode=1, stderr="Image not found")
+        mock_process = Mock()
+        mock_process.stdout.readline = Mock(side_effect=[""])  # EOF immediately
+        mock_process.wait.return_value = 1
+        mock_popen.return_value = mock_process
+
         with pytest.raises(RuntimeError, match="Docker pull failed"):
             pull_image("registry.io/myapp:nonexistent")
 
-    @patch("azure_deploy_cli.utils.docker.subprocess.run")
-    def test_tag_image_success(self, mock_run):
+    @patch("azure_deploy_cli.utils.docker.subprocess.Popen")
+    def test_tag_image_success(self, mock_popen):
         """Test successful image tagging."""
-        mock_run.return_value = Mock(returncode=0)
+        mock_process = Mock()
+        mock_process.stdout.readline = Mock(side_effect=[""])  # EOF immediately
+        mock_process.wait.return_value = 0
+        mock_popen.return_value = mock_process
+
         tag_image("registry.io/myapp:old", "registry.io/myapp:new")
-        mock_run.assert_called_once_with(
+        mock_popen.assert_called_once_with(
             ["docker", "tag", "registry.io/myapp:old", "registry.io/myapp:new"],
-            capture_output=True,
+            stdout=-1,
+            stderr=-2,
             text=True,
         )
 
-    @patch("azure_deploy_cli.utils.docker.subprocess.run")
-    def test_tag_image_failure(self, mock_run):
+    @patch("azure_deploy_cli.utils.docker.subprocess.Popen")
+    def test_tag_image_failure(self, mock_popen):
         """Test image tagging failure."""
-        mock_run.return_value = Mock(returncode=1, stderr="Tag failed")
+        mock_process = Mock()
+        mock_process.stdout.readline = Mock(side_effect=[""])  # EOF immediately
+        mock_process.wait.return_value = 1
+        mock_popen.return_value = mock_process
+
         with pytest.raises(RuntimeError, match="Docker tag failed"):
             tag_image("registry.io/myapp:old", "registry.io/myapp:new")
 
@@ -91,10 +109,10 @@ class TestDeployRevisionWithRetag:
 
     @patch("azure_deploy_cli.aca.deploy_aca._wait_for_revision_activation")
     @patch("azure_deploy_cli.aca.deploy_aca._get_container_app")
-    @patch("azure_deploy_cli.aca.deploy_aca._build_images_and_create_containers")
+    @patch("azure_deploy_cli.aca.deploy_aca.build_container_images")
     @patch("azure_deploy_cli.aca.deploy_aca._prepare_secrets_and_env_vars")
     def test_deploy_revision_with_existing_image_tag(
-        self, mock_prepare_secrets, mock_build_images, mock_get_app, mock_wait
+        self, mock_prepare_secrets, mockbuild_container_images, mock_get_app, mock_wait
     ):
         """Test deploy_revision successfully handles container with existing_image_tag."""
         # Setup mocks
@@ -106,7 +124,7 @@ class TestDeployRevisionWithRetag:
         mock_prepare_secrets.return_value = ([], [])
         mock_get_app.return_value = None
         mock_container = Mock()
-        mock_build_images.return_value = [mock_container]
+        mockbuild_container_images.return_value = [mock_container]
 
         mock_revision = Mock()
         mock_revision.name = "myapp--prod-20231215120000"
@@ -153,8 +171,8 @@ class TestDeployRevisionWithRetag:
         )
 
         # Verify build_images was called with container_configs
-        mock_build_images.assert_called_once()
-        args = mock_build_images.call_args[0]
+        mockbuild_container_images.assert_called_once()
+        args = mockbuild_container_images.call_args[0]
         assert args[0] == [container_config]
         assert args[1] == "registry.azurecr.io"
         assert args[2] == "prod-20231215120000"
@@ -164,10 +182,10 @@ class TestDeployRevisionWithRetag:
         assert result.active is True
 
     @patch("azure_deploy_cli.aca.deploy_aca._get_container_app")
-    @patch("azure_deploy_cli.aca.deploy_aca._build_images_and_create_containers")
+    @patch("azure_deploy_cli.aca.deploy_aca.build_container_images")
     @patch("azure_deploy_cli.aca.deploy_aca._prepare_secrets_and_env_vars")
     def test_deploy_revision_with_nonexistent_image_tag(
-        self, mock_prepare_secrets, mock_build_images, mock_get_app
+        self, mock_prepare_secrets, mockbuild_container_images, mock_get_app
     ):
         """Test deploy_revision fails when image building/retagging fails."""
         # Setup mocks
@@ -178,7 +196,7 @@ class TestDeployRevisionWithRetag:
 
         mock_prepare_secrets.return_value = ([], [])
         mock_get_app.return_value = None
-        mock_build_images.side_effect = RuntimeError("Docker pull failed")
+        mockbuild_container_images.side_effect = RuntimeError("Docker pull failed")
 
         # Create container config with existing_image_tag
         container_config = Mock()
@@ -213,10 +231,10 @@ class TestDeployRevisionWithRetag:
 
     @patch("azure_deploy_cli.aca.deploy_aca._wait_for_revision_activation")
     @patch("azure_deploy_cli.aca.deploy_aca._get_container_app")
-    @patch("azure_deploy_cli.aca.deploy_aca._build_images_and_create_containers")
+    @patch("azure_deploy_cli.aca.deploy_aca.build_container_images")
     @patch("azure_deploy_cli.aca.deploy_aca._prepare_secrets_and_env_vars")
     def test_deploy_revision_without_existing_image_tag(
-        self, mock_prepare_secrets, mock_build_images, mock_get_app, mock_wait
+        self, mock_prepare_secrets, mockbuild_container_images, mock_get_app, mock_wait
     ):
         """Test deploy_revision works normally when existing_image_tag is not provided."""
         # Setup mocks
@@ -228,7 +246,7 @@ class TestDeployRevisionWithRetag:
         mock_prepare_secrets.return_value = ([], [])
         mock_get_app.return_value = None
         mock_container = Mock()
-        mock_build_images.return_value = [mock_container]
+        mockbuild_container_images.return_value = [mock_container]
 
         mock_revision = Mock()
         mock_revision.name = "myapp--prod-20231215120000"
@@ -276,7 +294,7 @@ class TestDeployRevisionWithRetag:
         )
 
         # Verify build_images was called
-        mock_build_images.assert_called_once()
+        mockbuild_container_images.assert_called_once()
 
         # Verify deployment succeeded
         assert result.revision_name == "myapp--prod-20231215120000"
