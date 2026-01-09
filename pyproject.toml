@@ -58,6 +58,7 @@ azure_deploy_cli = [
 line-length = 100
 target-version = "py310"
 src = ["src", "tests"]
+exclude = ["*/_version.py"]
 
 [tool.ruff.lint]
 select = [

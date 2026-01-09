@@ -46,11 +46,11 @@ pip install -e /path/to/scripts
 
 ### Azure Container Apps (ACA) Deployment
 
-The ACA deployment process is split into two stages for better control:
+The ACA deployment process uses YAML configuration for containers and is split into two stages for better control:
 
 #### Stage 1: Deploy Revision
 
-Deploy a new container revision without affecting traffic:
+Deploy a new container revision from YAML configuration without affecting traffic:
 
 ```bash
 azd azaca deploy \
@@ -61,24 +61,75 @@ azd azaca deploy \
   --user-assigned-identity-name my-identity \
   --container-app my-app \
   --registry-server myregistry.azurecr.io \
-  --image-name my-image \
   --stage prod \
-  --target-port 8000 \
-  --cpu 0.5 \
-  --memory 1.0 \
+  --target-port 8080 \
   --min-replicas 1 \
   --max-replicas 10 \
   --keyvault-name my-keyvault \
-  --dockerfile ./Dockerfile \
-  --env-vars ENV_VAR1 ENV_VAR2 \
+  --container-config ./container-config.yaml \
   --env-var-secrets SECRET1 SECRET2
 ```
 
 This command:
 
+- Loads container configurations from YAML file
+- Builds/pushes container images for all containers
 - Creates or updates a new revision with 0% traffic
+- Supports multiple containers with independent configurations
 - Verifies the revision is healthy and active
 - Outputs the revision name for use in traffic management
+
+**Container Configuration YAML:**
+
+The `--container-config` file specifies container settings including images, resources, environment variables, and health probes:
+
+```yaml
+containers:
+  - name: my-app
+    image_name: my-image
+    cpu: 0.5
+    memory: "1.0Gi"
+    env_vars:
+      - ENV_VAR1
+      - ENV_VAR2
+    # relative to the directory which command will run fromm
+    dockerfile: ./Dockerfile
+    probes:
+      - type: Liveness
+        http_get:
+          path: /health
+          port: 8080
+        initial_delay_seconds: 10
+        period_seconds: 30
+      - type: Readiness
+        http_get:
+          path: /ready
+          port: 8080
+        initial_delay_seconds: 5
+        period_seconds: 10
+
+  - name: sidecar
+    image_name: sidecar-image
+    cpu: 0.25
+    memory: "0.5Gi"
+    env_vars:
+      - SIDECAR_CONFIG
+    existing_image_tag: v1.0.0  # Optional: retag from existing image
+```
+
+**Configuration Fields:**
+
+- `containers` (required): List of container configurations
+  - `name`: Container name (required)
+  - `image_name`: Image name without registry/tag (required)
+  - `cpu`: CPU allocation (required, e.g., 0.5)
+  - `memory`: Memory allocation (required, e.g., "1.0Gi")
+  - `env_vars`: List of environment variable names to load (optional)
+  - `dockerfile`: Path to Dockerfile for building (required if existing_image_tag not provided)
+  - `existing_image_tag`: Tag to retag from instead of building (required if dockerfile not provided)
+  - `probes`: List of health probes (optional)
+
+**Note:** Ingress configuration (target port) and scaling parameters (min/max replicas) are specified via CLI arguments, not in the YAML file.
 
 #### Stage 2: Update Traffic Weights
 

@@ -88,7 +88,7 @@ def configure_logging(level: str = "info") -> None:
     stderr_handler = logging.StreamHandler(sys.stderr)
     stderr_handler.setLevel(log_level)
     stderr_handler.addFilter(lambda record: record.levelno != STDOUT_LEVEL)
-    stderr_handler.setFormatter(ColoredFormatter("%(message)s"))
+    stderr_handler.setFormatter(ColoredFormatter("%(asctime)s %(message)s"))
     root_logger.addHandler(stderr_handler)
 
     # Handler for stdout (only for STDOUT level)

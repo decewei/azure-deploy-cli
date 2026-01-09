@@ -7,3 +7,4 @@ pytest-cov>=4.0.0
 commitizen>=3.0.0
 pre-commit>=3.0.0
 types-setuptools
+types-PyYAML
