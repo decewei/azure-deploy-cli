@@ -12,7 +12,6 @@ from ..identity.role import assign_role_by_files
 from ..utils.azure_cli import get_credential, get_subscription_and_tenant
 from ..utils.key_vault import get_key_vault_client
 from ..utils.logging import get_logger
-from ..utils.yaml_loader import load_app_config_yaml
 from .deploy_aca import (
     SecretKeyVaultConfig,
     bind_aca_managed_certificate,
@@ -22,6 +21,7 @@ from .deploy_aca import (
     update_traffic_weights,
     validate_revision_suffix_and_throw,
 )
+from .yaml_loader import ContainerAppConfig, load_app_config_yaml
 
 logger = get_logger(__name__)
 
@@ -127,12 +127,9 @@ def cli_deploy(args: Any) -> None:
             else generate_revision_suffix(stage=args.stage)
         )
 
-        # Load container configuration from YAML
         logger.critical(f"Loading container configuration from '{args.container_config}'...")
-        container_configs = load_app_config_yaml(args.container_config)
-        logger.critical(
-            f"Loaded configuration with {len(container_configs)} container(s)"
-        )
+        app_config: ContainerAppConfig = load_app_config_yaml(args.container_config)
+        logger.critical(f"Loaded configuration with {len(app_config.containers)} container(s)")
 
         logger.critical("Setting up managed identity and roles...")
         user_identity = create_or_get_user_identity(
@@ -170,10 +167,10 @@ def cli_deploy(args: Any) -> None:
             revision_suffix=revision_suffix,
             location=args.location,
             stage=args.stage,
-            container_configs=container_configs,
+            container_configs=app_config.containers,
             target_port=args.target_port,
-            ingress_external=getattr(args, 'ingress_external', True),
-            ingress_transport=getattr(args, 'ingress_transport', 'auto'),
+            ingress_external=args.ingress_external,
+            ingress_transport=args.ingress_transport,
             min_replicas=args.min_replicas,
             max_replicas=args.max_replicas,
             secret_key_vault_config=SecretKeyVaultConfig(
@@ -348,14 +345,14 @@ def add_commands(subparsers: argparse._SubParsersAction) -> None:
         type=str,
         help="Deployment stage label (e.g., staging, prod) used for revision naming.",
     )
-    
+
     deploy_parser.add_argument(
         "--target-port",
         required=True,
         type=int,
         help="Target port for the container app ingress.",
     )
-    
+
     deploy_parser.add_argument(
         "--ingress-external",
         required=False,
@@ -363,7 +360,7 @@ def add_commands(subparsers: argparse._SubParsersAction) -> None:
         default=True,
         help="Whether ingress is external (default: True).",
     )
-    
+
     deploy_parser.add_argument(
         "--ingress-transport",
         required=False,
@@ -372,21 +369,21 @@ def add_commands(subparsers: argparse._SubParsersAction) -> None:
         choices=["auto", "http", "http2", "tcp"],
         help="Ingress transport protocol (default: auto).",
     )
-    
+
     deploy_parser.add_argument(
         "--min-replicas",
         required=True,
         type=int,
         help="Minimum number of replicas for the container app.",
     )
-    
+
     deploy_parser.add_argument(
         "--max-replicas",
         required=True,
         type=int,
         help="Maximum number of replicas for the container app.",
     )
-    
+
     deploy_parser.add_argument(
         "--env-var-secrets",
         required=False,

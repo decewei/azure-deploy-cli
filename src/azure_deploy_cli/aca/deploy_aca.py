@@ -4,7 +4,6 @@ import subprocess
 import time
 from collections import defaultdict
 from pathlib import Path
-from typing import Any
 
 from azure.core.exceptions import (
     ClientAuthenticationError,
@@ -17,7 +16,6 @@ from azure.mgmt.appcontainers.models import (
     AppLogsConfiguration,
     Container,
     ContainerApp,
-    ContainerAppProbe,
     ContainerResources,
     EnvironmentVar,
     Ingress,
@@ -38,7 +36,7 @@ from azure.mgmt.keyvault.models import SecretCreateOrUpdateParameters, SecretPro
 from ..identity.models import ManagedIdentity
 from ..utils import docker
 from ..utils.logging import get_logger
-from .model import RevisionDeploymentResult, SecretKeyVaultConfig
+from .model import ContainerConfig, RevisionDeploymentResult, SecretKeyVaultConfig
 
 logger = get_logger(__name__)
 
@@ -220,10 +218,10 @@ def _build_images_and_create_containers(
         ValueError: If neither dockerfile nor existing_image_tag is specified
     """
     containers = []
-    
+
     for container_config in container_configs:
         logger.info(f"Processing container '{container_config.name}'...")
-        
+
         # Build full image name with revision suffix as tag
         image_tag = revision_suffix
         full_image_name = get_aca_docker_image_name(
@@ -285,7 +283,7 @@ def _build_images_and_create_containers(
                 probes=container_config.probes,
             )
         )
-    
+
     return containers
 
 
@@ -302,7 +300,7 @@ def deploy_revision(
     revision_suffix: str,
     location: str,
     stage: str,
-    container_configs: list,  # list[ContainerConfig] from yaml_loader
+    container_configs: list[ContainerConfig],  # list[ContainerConfig] from yaml_loader
     target_port: int,
     ingress_external: bool,
     ingress_transport: str,
@@ -351,7 +349,7 @@ def deploy_revision(
     all_env_var_names = []
     for container_config in container_configs:
         all_env_var_names.extend(container_config.env_vars)
-    
+
     # Remove duplicates while preserving order
     all_env_var_names = list(dict.fromkeys(all_env_var_names))
 

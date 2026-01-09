@@ -91,12 +91,12 @@ class TestDeployRevisionWithRetag:
 
     @patch("azure_deploy_cli.aca.deploy_aca._wait_for_revision_activation")
     @patch("azure_deploy_cli.aca.deploy_aca._get_container_app")
-    @patch("azure_deploy_cli.utils.docker.pull_retag_and_push_image")
+    @patch("azure_deploy_cli.aca.deploy_aca._build_images_and_create_containers")
     @patch("azure_deploy_cli.aca.deploy_aca._prepare_secrets_and_env_vars")
     def test_deploy_revision_with_existing_image_tag(
-        self, mock_prepare_secrets, mock_retag, mock_get_app, mock_wait
+        self, mock_prepare_secrets, mock_build_images, mock_get_app, mock_wait
     ):
-        """Test deploy_revision successfully retags an existing image."""
+        """Test deploy_revision successfully handles container with existing_image_tag."""
         # Setup mocks
         mock_client = Mock()
         mock_env = Mock(id="env-id")
@@ -105,6 +105,9 @@ class TestDeployRevisionWithRetag:
 
         mock_prepare_secrets.return_value = ([], [])
         mock_get_app.return_value = None
+        mock_container = Mock()
+        mock_build_images.return_value = [mock_container]
+
         mock_revision = Mock()
         mock_revision.name = "myapp--prod-20231215120000"
         mock_revision.active = True
@@ -119,7 +122,14 @@ class TestDeployRevisionWithRetag:
         mock_poller.result.return_value = None
         mock_client.container_apps.begin_create_or_update.return_value = mock_poller
 
-        # Call deploy_revision with existing_image_tag
+        # Create container config with existing_image_tag
+        container_config = Mock()
+        container_config.name = "myapp"
+        container_config.image_name = "myapp"
+        container_config.env_vars = []
+        container_config.existing_image_tag = "prod-20231214120000"
+
+        # Call deploy_revision with container_configs
         result = deploy_revision(
             client=mock_client,
             subscription_id="sub-id",
@@ -130,38 +140,36 @@ class TestDeployRevisionWithRetag:
             registry_server="registry.azurecr.io",
             registry_user="user",
             registry_pass_env_name="PASS",
-            image_name="myapp",
-            image_tag="prod-20231215120000",
+            revision_suffix="prod-20231215120000",
             location="eastus",
             stage="prod",
+            container_configs=[container_config],
             target_port=8080,
-            cpu=1.0,
-            memory="2.0",
+            ingress_external=True,
+            ingress_transport="auto",
             min_replicas=1,
             max_replicas=3,
             secret_key_vault_config=mock_secret_config,
-            env_var_names=[],
-            revision_suffix="prod-20231215120000",
-            existing_image_tag="prod-20231214120000",
         )
 
-        # Verify retag was called with correct parameters
-        mock_retag.assert_called_once_with(
-            "registry.azurecr.io/myapp:prod-20231214120000",
-            "registry.azurecr.io/myapp:prod-20231215120000",
-        )
+        # Verify build_images was called with container_configs
+        mock_build_images.assert_called_once()
+        args = mock_build_images.call_args[0]
+        assert args[0] == [container_config]
+        assert args[1] == "registry.azurecr.io"
+        assert args[2] == "prod-20231215120000"
 
         # Verify deployment succeeded
         assert result.revision_name == "myapp--prod-20231215120000"
         assert result.active is True
 
     @patch("azure_deploy_cli.aca.deploy_aca._get_container_app")
-    @patch("azure_deploy_cli.utils.docker.pull_retag_and_push_image")
+    @patch("azure_deploy_cli.aca.deploy_aca._build_images_and_create_containers")
     @patch("azure_deploy_cli.aca.deploy_aca._prepare_secrets_and_env_vars")
     def test_deploy_revision_with_nonexistent_image_tag(
-        self, mock_prepare_secrets, mock_retag, mock_get_app
+        self, mock_prepare_secrets, mock_build_images, mock_get_app
     ):
-        """Test deploy_revision fails when existing image doesn't exist."""
+        """Test deploy_revision fails when image building/retagging fails."""
         # Setup mocks
         mock_client = Mock()
         mock_env = Mock(id="env-id")
@@ -170,10 +178,17 @@ class TestDeployRevisionWithRetag:
 
         mock_prepare_secrets.return_value = ([], [])
         mock_get_app.return_value = None
-        mock_retag.side_effect = RuntimeError("Docker pull failed")
+        mock_build_images.side_effect = RuntimeError("Docker pull failed")
 
-        # Call deploy_revision with nonexistent existing_image_tag
-        with pytest.raises(RuntimeError, match="does not exist or retagging failed"):
+        # Create container config with existing_image_tag
+        container_config = Mock()
+        container_config.name = "myapp"
+        container_config.image_name = "myapp"
+        container_config.env_vars = []
+        container_config.existing_image_tag = "nonexistent-tag"
+
+        # Call deploy_revision - should fail during image building
+        with pytest.raises(RuntimeError, match="Docker pull failed"):
             deploy_revision(
                 client=mock_client,
                 subscription_id="sub-id",
@@ -184,27 +199,24 @@ class TestDeployRevisionWithRetag:
                 registry_server="registry.azurecr.io",
                 registry_user="user",
                 registry_pass_env_name="PASS",
-                image_name="myapp",
-                image_tag="prod-20231215120000",
+                revision_suffix="prod-20231215120000",
                 location="eastus",
                 stage="prod",
+                container_configs=[container_config],
                 target_port=8080,
-                cpu=1.0,
-                memory="2.0",
+                ingress_external=True,
+                ingress_transport="auto",
                 min_replicas=1,
                 max_replicas=3,
                 secret_key_vault_config=mock_secret_config,
-                env_var_names=[],
-                revision_suffix="prod-20231215120000",
-                existing_image_tag="nonexistent-tag",
             )
 
     @patch("azure_deploy_cli.aca.deploy_aca._wait_for_revision_activation")
     @patch("azure_deploy_cli.aca.deploy_aca._get_container_app")
-    @patch("azure_deploy_cli.utils.docker.pull_retag_and_push_image")
+    @patch("azure_deploy_cli.aca.deploy_aca._build_images_and_create_containers")
     @patch("azure_deploy_cli.aca.deploy_aca._prepare_secrets_and_env_vars")
     def test_deploy_revision_without_existing_image_tag(
-        self, mock_prepare_secrets, mock_retag, mock_get_app, mock_wait
+        self, mock_prepare_secrets, mock_build_images, mock_get_app, mock_wait
     ):
         """Test deploy_revision works normally when existing_image_tag is not provided."""
         # Setup mocks
@@ -215,6 +227,9 @@ class TestDeployRevisionWithRetag:
 
         mock_prepare_secrets.return_value = ([], [])
         mock_get_app.return_value = None
+        mock_container = Mock()
+        mock_build_images.return_value = [mock_container]
+
         mock_revision = Mock()
         mock_revision.name = "myapp--prod-20231215120000"
         mock_revision.active = True
@@ -228,6 +243,14 @@ class TestDeployRevisionWithRetag:
         mock_poller = Mock()
         mock_poller.result.return_value = None
         mock_client.container_apps.begin_create_or_update.return_value = mock_poller
+
+        # Create container config without existing_image_tag
+        container_config = Mock()
+        container_config.name = "myapp"
+        container_config.image_name = "myapp"
+        container_config.env_vars = []
+        container_config.existing_image_tag = None
+        container_config.dockerfile = "Dockerfile"
 
         # Call deploy_revision without existing_image_tag
         result = deploy_revision(
@@ -240,22 +263,20 @@ class TestDeployRevisionWithRetag:
             registry_server="registry.azurecr.io",
             registry_user="user",
             registry_pass_env_name="PASS",
-            image_name="myapp",
-            image_tag="prod-20231215120000",
+            revision_suffix="prod-20231215120000",
             location="eastus",
             stage="prod",
+            container_configs=[container_config],
             target_port=8080,
-            cpu=1.0,
-            memory="2.0",
+            ingress_external=True,
+            ingress_transport="auto",
             min_replicas=1,
             max_replicas=3,
             secret_key_vault_config=mock_secret_config,
-            env_var_names=[],
-            revision_suffix="prod-20231215120000",
         )
 
-        # Verify retag was NOT called
-        mock_retag.assert_not_called()
+        # Verify build_images was called
+        mock_build_images.assert_called_once()
 
         # Verify deployment succeeded
         assert result.revision_name == "myapp--prod-20231215120000"

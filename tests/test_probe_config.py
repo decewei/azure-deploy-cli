@@ -3,7 +3,7 @@ from pathlib import Path
 
 import pytest
 
-from azure_deploy_cli.utils.yaml_loader import load_app_config_yaml
+from azure_deploy_cli.aca.yaml_loader import load_app_config_yaml
 
 
 class TestYamlLoader:
@@ -26,7 +26,8 @@ containers:
             temp_path = Path(f.name)
 
         try:
-            containers = load_app_config_yaml(temp_path)
+            app = load_app_config_yaml(temp_path)
+            containers = app.containers
             assert containers is not None
             assert len(containers) == 1
             assert containers[0].name == "my-app"
@@ -61,7 +62,8 @@ containers:
             temp_path = Path(f.name)
 
         try:
-            containers = load_app_config_yaml(temp_path)
+            app = load_app_config_yaml(temp_path)
+            containers = app.containers
             assert containers is not None
             assert len(containers) == 1
             assert containers[0].probes is not None
@@ -96,7 +98,8 @@ containers:
             temp_path = Path(f.name)
 
         try:
-            containers = load_app_config_yaml(temp_path)
+            app = load_app_config_yaml(temp_path)
+            containers = app.containers
             assert containers is not None
             assert len(containers) == 2
             assert containers[0].name == "main-app"
@@ -153,7 +156,8 @@ containers:
             temp_path = Path(f.name)
 
         try:
-            containers = load_app_config_yaml(temp_path)
+            app = load_app_config_yaml(temp_path)
+            containers = app.containers
             assert containers is not None
             # Check defaults
             assert containers[0].env_vars == []
