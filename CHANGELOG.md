@@ -1,3 +1,8 @@
+## [1.0.0] - 2026-01-09
+
+### 🚀 Features
+
+- [**breaking**] Add new required YAML-based multi-container configuration for Azure Container Apps (#27)
 ## [0.1.12] - 2026-01-06
 
 ### 🐛 Bug Fixes
