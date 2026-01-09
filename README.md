@@ -92,6 +92,7 @@ containers:
     env_vars:
       - ENV_VAR1
       - ENV_VAR2
+    # relative to the directory which command will run fromm
     dockerfile: ./Dockerfile
     probes:
       - type: Liveness
