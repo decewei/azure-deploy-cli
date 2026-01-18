@@ -6,7 +6,7 @@ build-backend = "setuptools.build_meta"
 name = "azure-deploy-cli"
 description = "Python CLI for Azure deployment automation - identity, roles, and container apps management"
 readme = "README.md"
-requires-python = ">=3.10"
+requires-python = ">=3.11"
 license = {file = "LICENSE"}
 authors = [
     {name = "decewei", email = "celinew1221@gmail.com"}
@@ -18,18 +18,36 @@ classifiers = [
     "License :: OSI Approved :: Mozilla Public License 2.0 (MPL 2.0)",
     "Natural Language :: English",
     "Programming Language :: Python :: 3",
-    "Programming Language :: Python :: 3.10",
     "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
 ]
 
-dynamic = ["version", "dependencies", "optional-dependencies"]
+dynamic = ["version"]
 
-[tool.setuptools.dynamic]
-dependencies = { file = ["requirements.txt"] }
+dependencies = [
+    "azure-identity==1.25.1",
+    "azure-mgmt-appcontainers==4.0.0",
+    "azure-mgmt-authorization==4.0.0",
+    "azure-mgmt-keyvault==13.0.0",
+    "azure-mgmt-msi==7.1.0",
+    "python-dotenv==1.2.1",
+    "pydantic==2.12.5",
+    "PyYAML==6.0.3",
+]
 
-[tool.setuptools.dynamic.optional-dependencies]
-dev = { file = ["requirements-dev.txt"] }
+[project.optional-dependencies]
+dev = [
+    "ruff==0.14.10",
+    "mypy==1.19.1",
+    "pytest==9.0.2",
+    "pytest-asyncio==1.3.0",
+    "coverage==7.13.1",
+    "pytest-cov==7.0.0",
+    "commitizen==4.11.0",
+    "pre-commit==4.1.0",
+    "types-setuptools==80.9.0.20251223",
+    "types-PyYAML==6.0.12.20250915",
+]
 
 [project.urls]
 Homepage = "https://github.com/decewei/azure-deploy-cli"

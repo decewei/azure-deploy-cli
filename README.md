@@ -2,45 +2,28 @@
 
 Python CLI for Azure deployment automation - manage identities, roles, and Container Apps deployments.
 
-## Version Management and Changelog
-
-This project uses a dual-tool approach:
-
-- **[setuptools-scm](https://setuptools-scm.readthedocs.io/)** - Automatic versioning based on git tags (dynamic at build time)
-- **[commitizen](https://commitizen-tools.github.io/commitizen/)** - Version bumping and tagging with semantic versioning
-- **[git-cliff](https://git-cliff.org/)** - Automatic changelog generation from conventional commits
-
-**Release workflow:**
-1. git-cliff generates changelog from commits since last tag
-2. commitizen bumps version and creates git tag
-3. New version is committed alongside updated changelog
-4. Tag triggers PyPI publishing and GitHub Release
-
-No manual version or changelog updates are needed.
-
 ## Quick Start
 
 **Install for development:**
 
 ```bash
 cd /path/to/azure-deploy-cli
-pip install -e ".[dev]"
+source setup.sh -i
 azd --help
 ```
 
 **Use in another project:**
 
 ```bash
-pip install -e /path/to/scripts
+pip install azure-deploy-cli
 ```
 
 ## Installation
 
-| Method | Command |
-|--------|----------|
-| Local development | `pip install -e ".[dev]"` |
-| Local changes | `pip install -e /path/to/azure-deploy-cli` |
-| From PyPI | `pip install azure-deploy-cli` |
+| Method              | Command                       |
+| ------------------- | ----------------------------- |
+| Local development   | `source setup.sh -i`          |
+| From PyPI           | `pip install azure-deploy-cli`|
 
 ## CLI Commands
 
@@ -240,20 +223,6 @@ azd create-and-assign \
   --env-file .env.credentials \
   --print
 ```
-
-## Development
-
-```bash
-make install-dev    # Install with dev tools
-make build          # Run lint + type-check + test
-make lint           # Code linting with ruff
-make format         # Auto-format code
-make type-check     # Type checking with mypy
-make test           # Run tests with pytest
-make clean          # Remove build artifacts
-```
-
-Commit using [Conventional Commits](https://www.conventionalcommits.org/) format (e.g., `feat: add feature`, `fix: resolve bug`)
 
 ## Scripting and Output Handling
 

@@ -1,52 +1,35 @@
 #!/bin/bash
 
-# Default environment name
-ENV_NAME="azure-deploy-cli"
+ENV_DIR=".venv"
+PROD=false
 
 while [[ "$#" -gt 0 ]]; do
     case $1 in
-        -n|--name) ENV_NAME="$2"; shift ;;
         -i|--install) INSTALL_DEPS=true ;;
+        -p|--prod) PROD=true ;;
         *) echo "Unknown parameter: $1"; exit 1 ;;
     esac
     shift
 done
 
-# Check if the script is being sourced
-if [[ "${BASH_SOURCE[0]}" == "${0}" ]]; then
-    echo "Error: This script must be sourced, not executed directly."
-    echo "Please run it as: source setup.sh"
-    exit 1
+# Create virtual environment with uv (Python 3.11 specified)
+if [ ! -d "$ENV_DIR" ]; then
+    echo "Creating virtual environment '$ENV_DIR' with uv..."
+    uv venv -p 3.11 "$ENV_DIR"
+    echo "Created virtual env $ENV_DIR"
 fi
 
-# Check if the virtual environment is already activated
-if [[ "$VIRTUAL_ENV" != "" ]]
-then
-    echo "Virtual environment is already activated."
-else
-    # Create a virtual environment if it doesn't exist
-    if [ ! -d "$ENV_NAME" ]; then
-        echo "Creating virtual environment '$ENV_NAME'..."
-        python3 -m venv "$ENV_NAME"
-        echo "Created virtual env $VIRTUAL_ENV"
-    fi
-
-    # Activate the virtual environment
-    echo "Activating virtual environment '$ENV_NAME'..."
-    # The key part: sourcing to keep it in the current shell
-    source "$ENV_NAME/bin/activate"
-
-    # Check if activation worked
-    if [[ "$VIRTUAL_ENV" == "" ]]; then
-        echo "Failed to activate virtual environment!"
-        exit 1
-    fi
-fi
+# Activate the virtual environment
+source "$ENV_DIR/bin/activate"
 
 if [ "$INSTALL_DEPS" = true ]; then
-    echo "Installing dependencies..."
-    pip install --upgrade pip
-    make install-dev
+    if [ "$PROD" = true ]; then
+        echo "Installing production dependencies with uv..."
+        make install
+    else
+        echo "Installing dependencies with uv..."
+        make install-dev
+    fi
 fi
 
 echo "Type \`deactivate\` to exit the virtual environment."
