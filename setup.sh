@@ -1,10 +1,12 @@
 #!/bin/bash
 
 ENV_DIR=".venv"
+PROD=false
 
 while [[ "$#" -gt 0 ]]; do
     case $1 in
         -i|--install) INSTALL_DEPS=true ;;
+        -p|--prod) PROD=true ;;
         *) echo "Unknown parameter: $1"; exit 1 ;;
     esac
     shift
@@ -21,8 +23,13 @@ fi
 source "$ENV_DIR/bin/activate"
 
 if [ "$INSTALL_DEPS" = true ]; then
-    echo "Installing dependencies with uv..."
-    uv sync --all-extras
+    if [ "$PROD" = true ]; then
+        echo "Installing production dependencies with uv..."
+        make install
+    else
+        echo "Installing dependencies with uv..."
+        make install-dev
+    fi
 fi
 
 echo "Type \`deactivate\` to exit the virtual environment."

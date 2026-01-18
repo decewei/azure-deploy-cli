@@ -22,7 +22,7 @@ jobs:
           enable-cache: true
 
       - name: Install dependencies
-        run: make install-dev
+        run: source setup.sh --install
 
       - name: Lint
         run: make lint

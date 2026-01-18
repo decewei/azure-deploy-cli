@@ -18,12 +18,11 @@ help:
 	@echo "  build            Run linting, type checking, and tests"
 
 setup-hooks:
-	pre-commit install
-	pre-commit install --hook-type commit-msg
+	uv run pre-commit install
+	uv run pre-commit install --hook-type commit-msg
 
 install:
 	uv sync
-	$(MAKE) setup-hooks
 
 install-dev:
 	uv sync --all-extras
