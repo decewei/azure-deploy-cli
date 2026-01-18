@@ -1,8 +1,0 @@
-azure-identity>=1.14.0
-azure-mgmt-appcontainers
-azure-mgmt-authorization
-azure-mgmt-keyvault
-azure-mgmt-msi
-python-dotenv>=1.0.0
-pydantic>=2.0.0
-pyyaml>=6.0

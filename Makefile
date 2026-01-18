@@ -22,11 +22,11 @@ setup-hooks:
 	pre-commit install --hook-type commit-msg
 
 install:
-	pip install .
+	uv sync
 	$(MAKE) setup-hooks
 
 install-dev:
-	pip install -e ".[dev]"
+	uv sync --all-extras
 	$(MAKE) setup-hooks
 
 commit:
