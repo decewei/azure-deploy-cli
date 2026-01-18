@@ -29,22 +29,22 @@ install-dev:
 	$(MAKE) setup-hooks
 
 commit:
-	cz commit
+	uv run cz commit
 
 lint:
-	ruff check src/ tests/ 2>/dev/null || echo "No issues found"
+	uv run ruff check src/ tests/ 2>/dev/null || echo "No issues found"
 
 format:
-	ruff format src/ tests/
+	uv run ruff format src/ tests/
 
 type-check:
-	mypy src/azure_deploy_cli
+	uv run mypy src/azure_deploy_cli
 
 test:
-	pytest tests/ -v
+	uv run pytest tests/ -v
 
 test-cov:
-	pytest tests/ -v --cov=src/azure_deploy_cli --cov-report=html --cov-report=term-missing
+	uv run pytest tests/ -v --cov=src/azure_deploy_cli --cov-report=html --cov-report=term-missing
 
 clean:
 	find . -type d -name "__pycache__" -exec rm -rf {} + 2>/dev/null || true
