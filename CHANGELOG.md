@@ -1,3 +1,8 @@
+## [1.0.4] - 2026-01-29
+
+### 🐛 Bug Fixes
+
+- Change stderr to sys.stderr in deploy_aca.py (#38)
 ## [1.0.3] - 2026-01-29
 ## [1.0.2] - 2026-01-29
 
