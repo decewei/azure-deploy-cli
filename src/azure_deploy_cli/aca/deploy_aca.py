@@ -157,7 +157,7 @@ def bind_aca_managed_certificate(
         ],
         env=os.environ.copy(),
         stdout=sys.stderr,
-        stderr=subprocess.PIPE,
+        stderr=sys.stderr,
     )
     if result.returncode != 0:
         logger.error("Failed to bind certificate using aca-cert script.")
