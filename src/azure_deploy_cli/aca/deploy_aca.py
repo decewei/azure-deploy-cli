@@ -338,13 +338,16 @@ def deploy_revision(
     # prepare ingress with existing traffic weights
     existing_app = _get_container_app(client, resource_group, container_app_name)
     existing_traffic_weights = None
+    existing_custom_domains = None
     if existing_app and existing_app.configuration and existing_app.configuration.ingress:
         existing_traffic_weights = existing_app.configuration.ingress.traffic
+        existing_custom_domains = existing_app.configuration.ingress.custom_domains
     ingress: Ingress = Ingress(
         external=ingress_external,
         target_port=target_port,
         transport=ingress_transport,
         traffic=existing_traffic_weights,  # Preserve existing traffic
+        custom_domains=existing_custom_domains,
     )
 
     revision_name = generate_revision_name(container_app_name, revision_suffix, stage)
