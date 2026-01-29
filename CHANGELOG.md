@@ -1,3 +1,8 @@
+## [1.0.2] - 2026-01-29
+
+### 🐛 Bug Fixes
+
+- Update certificate validation method to TXT (#34)
 ## [1.0.1] - 2026-01-18
 
 ### ⚙️ Miscellaneous Tasks
