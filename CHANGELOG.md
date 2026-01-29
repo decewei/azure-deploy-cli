@@ -1,3 +1,8 @@
+## [1.0.5] - 2026-01-29
+
+### 🐛 Bug Fixes
+
+- Add support for existing custom domains in ingress (#40)
 ## [1.0.4] - 2026-01-29
 
 ### 🐛 Bug Fixes
