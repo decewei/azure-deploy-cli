@@ -1,3 +1,8 @@
+## [1.1.0] - 2026-01-31
+
+### 🚀 Features
+
+- Added allowed ip support (#42)
 ## [1.0.5] - 2026-01-29
 
 ### 🐛 Bug Fixes
