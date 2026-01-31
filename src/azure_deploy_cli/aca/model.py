@@ -52,6 +52,9 @@ class ContainerConfig(BaseModel):
         default=None, description="List of probe configurations"
     )
     existing_image_tag: str | None = Field(default=None, description="Optional tag to retag from")
+    existing_image_platform: str | None = Field(
+        default=None, description="Optional platform for existing image pull"
+    )
     dockerfile: str | None = Field(default=None, description="Optional dockerfile path")
 
     def post_init(self):

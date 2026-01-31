@@ -88,6 +88,7 @@ bind() {
   # use dig to verify the asuid txt record exists on the DNS host
   # azure requires this to exist prior to adding the domain
   # azure's dns can also be slow, so best to check propagation
+  # you need TXT record with verification code added to your dns manager
   tries=0
   until [ "$tries" -ge 12 ]; do
     [[ ! -z $(dig @8.8.8.8 txt asuid.$CUSTOM_DOMAIN +short) ]] && break
@@ -136,7 +137,7 @@ bind() {
         -g $ENV_RESOURCE_GROUP \
         -n $CONTAINER_APP_ENV_NAME \
         --hostname $CUSTOM_DOMAIN \
-        --validation-method CNAME \
+        --validation-method TXT \
         --query "id" \
         --output tsv
     )
