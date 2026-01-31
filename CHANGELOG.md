@@ -1,3 +1,9 @@
+## [1.1.1] - 2026-01-31
+
+### 💼 Other
+
+- *(dep)* Bump astral-sh/setup-uv in the dependencies group (#31)
+- *(dep)* Bump the dependencies group across 1 directory with 5 updates (#33)
 ## [1.1.0] - 2026-01-31
 
 ### 🚀 Features
