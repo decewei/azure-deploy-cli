@@ -1,6 +1,7 @@
 import datetime
 import os
 import subprocess
+import sys
 import time
 from collections import defaultdict
 from pathlib import Path
@@ -19,6 +20,7 @@ from azure.mgmt.appcontainers.models import (
     ContainerResources,
     EnvironmentVar,
     Ingress,
+    IpSecurityRestrictionRule,
     LogAnalyticsConfiguration,
     ManagedEnvironment,
     ManagedServiceIdentity,
@@ -155,6 +157,8 @@ def bind_aca_managed_certificate(
             container_app_env_name,
         ],
         env=os.environ.copy(),
+        stdout=sys.stderr,
+        stderr=sys.stderr,
     )
     if result.returncode != 0:
         logger.error("Failed to bind certificate using aca-cert script.")
@@ -218,7 +222,12 @@ def build_container_images(
             source_full_image_name = get_aca_docker_image_name(
                 registry_server, container_config.image_name, container_config.existing_image_tag
             )
-            docker.pull_retag_and_push_image(source_full_image_name, target_full_image_name)
+            _login_to_acr(registry_server)
+            docker.pull_retag_and_push_image(
+                source_full_image_name,
+                target_full_image_name,
+                container_config.existing_image_platform,
+            )
             logger.success(f"Image retagged successfully to '{image_tag}'")
         elif container_config.dockerfile:
             logger.info(
@@ -256,6 +265,7 @@ def deploy_revision(
     min_replicas: int,
     max_replicas: int,
     secret_key_vault_config: SecretKeyVaultConfig,
+    ip_rules: list[IpSecurityRestrictionRule],
 ) -> RevisionDeploymentResult:
     """
     Deploy a new revision with multiple containers without updating traffic weights.
@@ -335,13 +345,17 @@ def deploy_revision(
     # prepare ingress with existing traffic weights
     existing_app = _get_container_app(client, resource_group, container_app_name)
     existing_traffic_weights = None
+    existing_custom_domains = None
     if existing_app and existing_app.configuration and existing_app.configuration.ingress:
         existing_traffic_weights = existing_app.configuration.ingress.traffic
+        existing_custom_domains = existing_app.configuration.ingress.custom_domains
     ingress: Ingress = Ingress(
         external=ingress_external,
         target_port=target_port,
         transport=ingress_transport,
         traffic=existing_traffic_weights,  # Preserve existing traffic
+        custom_domains=existing_custom_domains,
+        ip_security_restrictions=ip_rules,
     )
 
     revision_name = generate_revision_name(container_app_name, revision_suffix, stage)

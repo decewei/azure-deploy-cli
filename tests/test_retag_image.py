@@ -78,7 +78,7 @@ class TestRetagImage:
             "registry.azurecr.io/myapp:new-tag",
         )
 
-        mock_pull.assert_called_once_with("registry.azurecr.io/myapp:old-tag")
+        mock_pull.assert_called_once_with("registry.azurecr.io/myapp:old-tag", None)
         mock_tag.assert_called_once_with(
             "registry.azurecr.io/myapp:old-tag", "registry.azurecr.io/myapp:new-tag"
         )
@@ -168,6 +168,7 @@ class TestDeployRevisionWithRetag:
             min_replicas=1,
             max_replicas=3,
             secret_key_vault_config=mock_secret_config,
+            ip_rules=[],
         )
 
         # Verify build_images was called with container_configs
@@ -227,6 +228,7 @@ class TestDeployRevisionWithRetag:
                 min_replicas=1,
                 max_replicas=3,
                 secret_key_vault_config=mock_secret_config,
+                ip_rules=[],
             )
 
     @patch("azure_deploy_cli.aca.deploy_aca._wait_for_revision_activation")
@@ -291,6 +293,7 @@ class TestDeployRevisionWithRetag:
             min_replicas=1,
             max_replicas=3,
             secret_key_vault_config=mock_secret_config,
+            ip_rules=[],
         )
 
         # Verify build_images was called

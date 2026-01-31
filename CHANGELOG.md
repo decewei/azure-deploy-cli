@@ -1,3 +1,24 @@
+## [1.1.0] - 2026-01-31
+
+### 🚀 Features
+
+- Added allowed ip support (#42)
+## [1.0.5] - 2026-01-29
+
+### 🐛 Bug Fixes
+
+- Add support for existing custom domains in ingress (#40)
+## [1.0.4] - 2026-01-29
+
+### 🐛 Bug Fixes
+
+- Change stderr to sys.stderr in deploy_aca.py (#38)
+## [1.0.3] - 2026-01-29
+## [1.0.2] - 2026-01-29
+
+### 🐛 Bug Fixes
+
+- Update certificate validation method to TXT (#34)
 ## [1.0.1] - 2026-01-18
 
 ### ⚙️ Miscellaneous Tasks

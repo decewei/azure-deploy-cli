@@ -6,6 +6,7 @@ from pathlib import Path
 from typing import Any
 
 from azure.mgmt.appcontainers import ContainerAppsAPIClient
+from azure.mgmt.appcontainers.models import IpSecurityRestrictionRule
 
 from ..identity.managed_identity import create_or_get_user_identity
 from ..identity.role import assign_role_by_files
@@ -62,7 +63,9 @@ def _label_weight_pair(pair_str: str) -> tuple[str, int]:
     return (label, weight)
 
 
-def _convert_label_traffic_args(label_traffic_list: list[tuple[str, int]]) -> dict[str, int]:
+def _convert_label_traffic_args(
+    label_traffic_list: list[tuple[str, int]],
+) -> dict[str, int]:
     """
     Convert list of (label, weight) tuples to dictionary.
 
@@ -153,6 +156,19 @@ def cli_deploy(args: Any) -> None:
         if not env:
             raise ValueError("Cannot create container app env")
 
+        ip_rules: list[IpSecurityRestrictionRule] = []
+        if args.allowed_ips:
+            for name, cidr_ranges in args.allowed_ips:
+                for idx, cidr_range in enumerate(cidr_ranges):
+                    rule = IpSecurityRestrictionRule(
+                        name=f"{name}-{idx + 1}",
+                        action="Allow",
+                        ip_address_range=cidr_range,
+                        description=f"Allowed {name} IP range",
+                    )
+                    ip_rules.append(rule)
+            logger.critical(f"Configured {len(ip_rules)} Allowed IP restriction rules.")
+
         logger.critical("Deploying new revision...")
         result = deploy_revision(
             client=container_apps_api_client,
@@ -179,6 +195,7 @@ def cli_deploy(args: Any) -> None:
                 secret_names=args.env_var_secrets or [],
                 user_identity=user_identity,
             ),
+            ip_rules=ip_rules,
         )
 
         if args.custom_domains:
@@ -428,6 +445,24 @@ def add_commands(subparsers: argparse._SubParsersAction) -> None:
         type=Path,
         help="Path to YAML file containing container configurations "
         "(includes image names, cpu, memory, env_vars, probes, ingress, and scale settings)",
+    )
+
+    def tuple_ip(value: str) -> tuple[str, list[str]]:
+        if "=" not in value:
+            raise argparse.ArgumentTypeError(
+                f"Invalid format: '{value}'. Expected format: Name=IP1,IP2/CIDR"
+            )
+        name, ranges = value.split("=")
+        cidr_ranges = [cidr.strip() for cidr in ranges.split(",") if cidr.strip()]
+        return name, cidr_ranges
+
+    deploy_parser.add_argument(
+        "--allowed-ips",
+        nargs="*",
+        required=True,
+        type=tuple_ip,
+        help="List of allowed IP addresses or CIDR ranges for IP restriction. "
+        + "e.g., Name=1.3.5.7/32,2.3.4.3/24 Name2=3.4.5.6/43",
     )
 
     deploy_parser.set_defaults(func=cli_deploy)
