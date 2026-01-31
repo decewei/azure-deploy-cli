@@ -20,6 +20,7 @@ from azure.mgmt.appcontainers.models import (
     ContainerResources,
     EnvironmentVar,
     Ingress,
+    IpSecurityRestrictionRule,
     LogAnalyticsConfiguration,
     ManagedEnvironment,
     ManagedServiceIdentity,
@@ -221,7 +222,12 @@ def build_container_images(
             source_full_image_name = get_aca_docker_image_name(
                 registry_server, container_config.image_name, container_config.existing_image_tag
             )
-            docker.pull_retag_and_push_image(source_full_image_name, target_full_image_name)
+            _login_to_acr(registry_server)
+            docker.pull_retag_and_push_image(
+                source_full_image_name,
+                target_full_image_name,
+                container_config.existing_image_platform,
+            )
             logger.success(f"Image retagged successfully to '{image_tag}'")
         elif container_config.dockerfile:
             logger.info(
@@ -259,6 +265,7 @@ def deploy_revision(
     min_replicas: int,
     max_replicas: int,
     secret_key_vault_config: SecretKeyVaultConfig,
+    ip_rules: list[IpSecurityRestrictionRule],
 ) -> RevisionDeploymentResult:
     """
     Deploy a new revision with multiple containers without updating traffic weights.
@@ -348,6 +355,7 @@ def deploy_revision(
         transport=ingress_transport,
         traffic=existing_traffic_weights,  # Preserve existing traffic
         custom_domains=existing_custom_domains,
+        ip_security_restrictions=ip_rules,
     )
 
     revision_name = generate_revision_name(container_app_name, revision_suffix, stage)

@@ -61,17 +61,22 @@ def push_image(full_image_name: str) -> None:
         raise RuntimeError("Docker push failed")
 
 
-def pull_image(full_image_name: str) -> None:
+def pull_image(full_image_name: str, platform: str | None = None) -> None:
     """
     Pull a Docker image from the registry.
 
     Args:
         full_image_name: Full image name including registry, repository, and tag
+        platform: Optional platform specification (e.g., "linux/amd64")
 
     Raises:
         RuntimeError: If the docker pull command fails
     """
-    returncode = _run_and_stream(["docker", "pull", full_image_name])
+    cmd = ["docker", "pull"]
+    if platform:
+        cmd.extend(["--platform", platform])
+    cmd.append(full_image_name)
+    returncode = _run_and_stream(cmd)
     if returncode != 0:
         raise RuntimeError("Docker pull failed")
 
@@ -95,6 +100,7 @@ def tag_image(source_image: str, target_image: str) -> None:
 def pull_retag_and_push_image(
     source_full_image_name: str,
     target_full_image_name: str,
+    platform: str | None = None,
 ) -> None:
     """
     Pull an existing image, retag it, and push to registry.
@@ -107,7 +113,7 @@ def pull_retag_and_push_image(
         RuntimeError: If the source image doesn't exist or operations fail
     """
     if not image_exists(source_full_image_name):
-        pull_image(source_full_image_name)
+        pull_image(source_full_image_name, platform)
 
     tag_image(source_full_image_name, target_full_image_name)
     push_image(target_full_image_name)
