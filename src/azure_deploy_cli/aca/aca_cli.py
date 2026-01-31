@@ -453,7 +453,7 @@ def add_commands(subparsers: argparse._SubParsersAction) -> None:
                 f"Invalid format: '{value}'. Expected format: Name=IP1,IP2/CIDR"
             )
         name, ranges = value.split("=")
-        cidr_ranges = [cidr.strip() for cidr in ranges.split(",")]
+        cidr_ranges = [cidr.strip() for cidr in ranges.split(",") if cidr.strip()]
         return name, cidr_ranges
 
     deploy_parser.add_argument(
