@@ -1,3 +1,8 @@
+## [1.2.1] - 2026-02-03
+
+### 🐛 Bug Fixes
+
+- Enable info log on docker command (#49)
 ## [1.2.0] - 2026-02-03
 
 ### 🚀 Features
