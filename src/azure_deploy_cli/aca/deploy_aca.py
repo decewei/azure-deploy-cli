@@ -240,7 +240,7 @@ def build_container_images(
                 dockerfile=container_config.dockerfile,
                 full_image_name=target_full_image_name,
                 registry_server=registry_server,
-                build_args=container_config.build_args,
+                build_args=_load_env_vars(container_config.build_args),
             )
             logger.success("Image built successfully")
         image_names.append(target_full_image_name)
