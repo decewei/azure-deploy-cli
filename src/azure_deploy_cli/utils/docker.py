@@ -155,7 +155,7 @@ def build_and_push_image(
 
     cmd.extend([src_folder, "--push"])
 
-    logger.info(f"Running command: {' '.join(cmd)}")
+    logger.debug(f"Running command: {' '.join(cmd)}")
     returncode = _run_and_stream(cmd)
     if returncode != 0:
         raise RuntimeError("Docker build and push failed")
