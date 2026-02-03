@@ -56,6 +56,9 @@ class ContainerConfig(BaseModel):
         default=None, description="Optional platform for existing image pull"
     )
     dockerfile: str | None = Field(default=None, description="Optional dockerfile path")
+    build_args: dict[str, str] | None = Field(
+        default=None, description="Optional build arguments to pass to docker build"
+    )
 
     def post_init(self):
         if not (self.dockerfile or self.existing_image_tag):

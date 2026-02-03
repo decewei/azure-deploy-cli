@@ -66,6 +66,7 @@ def build_acr_image(
     full_image_name: str,
     registry_server: str,
     source_full_image_name: str | None = None,
+    build_args: dict[str, str] | None = None,
 ) -> None:
     logger.info(f"Logging in to ACR '{registry_server}'...")
     _login_to_acr(registry_server)
@@ -93,6 +94,7 @@ def build_acr_image(
     docker.build_and_push_image(
         dockerfile,
         full_image_name,
+        build_args=build_args,
     )
     logger.success("Docker image built and pushed to registry successfully.")
 
@@ -238,6 +240,7 @@ def build_container_images(
                 dockerfile=container_config.dockerfile,
                 full_image_name=target_full_image_name,
                 registry_server=registry_server,
+                build_args=container_config.build_args,
             )
             logger.success("Image built successfully")
         image_names.append(target_full_image_name)

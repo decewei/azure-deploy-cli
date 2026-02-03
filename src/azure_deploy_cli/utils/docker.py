@@ -122,6 +122,7 @@ def pull_retag_and_push_image(
 def build_and_push_image(
     dockerfile: str,
     full_image_name: str,
+    build_args: dict[str, str] | None = None,
 ) -> None:
     """
     Build a Docker image using buildx and push to registry.
@@ -129,25 +130,31 @@ def build_and_push_image(
     Args:
         dockerfile: Path to the Dockerfile
         full_image_name: Full image name including registry, repository, and tag
+        build_args: Optional dictionary of build arguments to pass to docker build
 
     Raises:
         RuntimeError: If the docker build and push command fails
     """
     src_folder = str(Path(dockerfile).parent)
-    returncode = _run_and_stream(
-        [
-            "docker",
-            "buildx",
-            "build",
-            "--platform",
-            "linux/amd64",
-            "-t",
-            full_image_name,
-            "-f",
-            dockerfile,
-            src_folder,
-            "--push",
-        ]
-    )
+    cmd = [
+        "docker",
+        "buildx",
+        "build",
+        "--platform",
+        "linux/amd64",
+        "-t",
+        full_image_name,
+        "-f",
+        dockerfile,
+    ]
+
+    # Add build args if provided
+    if build_args:
+        for key, value in build_args.items():
+            cmd.extend(["--build-arg", f"{key}={value}"])
+
+    cmd.extend([src_folder, "--push"])
+
+    returncode = _run_and_stream(cmd)
     if returncode != 0:
         raise RuntimeError("Docker build and push failed")
