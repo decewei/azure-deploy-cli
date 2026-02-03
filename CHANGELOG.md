@@ -1,3 +1,13 @@
+## [1.2.1] - 2026-02-03
+
+### 🐛 Bug Fixes
+
+- Enable info log on docker command (#49)
+## [1.2.0] - 2026-02-03
+
+### 🚀 Features
+
+- Support docker build args (#47)
 ## [1.1.1] - 2026-01-31
 
 ### 💼 Other
