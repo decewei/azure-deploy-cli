@@ -37,13 +37,13 @@ dependencies = [
 
 [project.optional-dependencies]
 dev = [
-    "ruff==0.15.17",
+    "ruff==0.15.20",
     "mypy==2.1.0",
-    "pytest==9.1.0",
+    "pytest==9.1.1",
     "pytest-asyncio==1.4.0",
-    "coverage==7.14.1",
+    "coverage==7.14.3",
     "pytest-cov==7.1.0",
-    "commitizen==4.16.3",
+    "commitizen==4.16.4",
     "pre-commit==4.6.0",
     "types-setuptools==82.0.0.20260518",
     "types-PyYAML==6.0.12.20260518",
