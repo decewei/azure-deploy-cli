@@ -41,11 +41,11 @@ dev = [
     "mypy==2.1.0",
     "pytest==9.1.1",
     "pytest-asyncio==1.4.0",
-    "coverage==7.14.3",
+    "coverage==7.15.0",
     "pytest-cov==7.1.0",
     "commitizen==4.16.4",
     "pre-commit==4.6.0",
-    "types-setuptools==82.0.0.20260518",
+    "types-setuptools==83.0.0.20260706",
     "types-PyYAML==6.0.12.20260518",
 ]
 
