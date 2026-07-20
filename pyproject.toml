@@ -26,7 +26,7 @@ dynamic = ["version"]
 
 dependencies = [
     "azure-identity==1.25.3",
-    "azure-mgmt-appcontainers==4.0.0",
+    "azure-mgmt-appcontainers==5.0.0",
     "azure-mgmt-authorization==4.0.0",
     "azure-mgmt-keyvault==14.0.1",
     "azure-mgmt-msi==7.1.0",
@@ -37,15 +37,15 @@ dependencies = [
 
 [project.optional-dependencies]
 dev = [
-    "ruff==0.15.20",
-    "mypy==2.1.0",
+    "ruff==0.15.22",
+    "mypy==2.3.0",
     "pytest==9.1.1",
     "pytest-asyncio==1.4.0",
-    "coverage==7.15.0",
+    "coverage==7.15.2",
     "pytest-cov==7.1.0",
-    "commitizen==4.16.4",
+    "commitizen==4.16.5",
     "pre-commit==4.6.0",
-    "types-setuptools==83.0.0.20260706",
+    "types-setuptools==83.0.0.20260716",
     "types-PyYAML==6.0.12.20260518",
 ]
 
